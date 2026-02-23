@@ -1,0 +1,226 @@
+/* assets/css/admin.css */
+.admin-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+.admin-sidebar {
+    width: 260px;
+    background: #1a1c23;
+    height: 100vh;
+    position: fixed;
+    color: #8a8b9f;
+    padding: 25px;
+    z-index: 1001;
+    transition: 0.3s;
+}
+
+.admin-sidebar a {
+    color: #8a8b9f;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border-radius: 10px;
+    margin-bottom: 5px;
+    transition: 0.3s;
+}
+
+.admin-sidebar a:hover,
+.admin-sidebar a.active {
+    background: #2d2f39;
+    color: white;
+}
+
+.admin-sidebar h2 {
+    color: white;
+    margin-bottom: 40px;
+    font-size: 1.4rem;
+}
+
+.main-content {
+    margin-left: 260px;
+    padding: 40px;
+    background: #f4f5f7;
+    min-height: 100vh;
+    width: calc(100% - 260px);
+    transition: 0.3s;
+}
+
+/* Mobile Top Bar */
+.admin-mobile-header {
+    display: none;
+    background: #1a1c23;
+    color: white;
+    padding: 15px 20px;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 1002;
+}
+
+.admin-mobile-header .hamburger {
+    font-size: 1.5rem;
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: white;
+}
+
+/* Cards & Grid */
+.grid-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+    margin-bottom: 40px;
+}
+
+.stat-box {
+    background: white;
+    padding: 25px;
+    border-radius: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.icon-circle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.card {
+    background: white;
+    padding: 25px;
+    border-radius: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.item-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.item-row:last-child {
+    border-bottom: none;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+/* Badges */
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.approved {
+    background: #d4edda;
+    color: #155724;
+}
+
+.rejected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* Walk-in Grid */
+.walkin-grid {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: 30px;
+}
+
+.category-title {
+    margin: 20px 0 10px;
+    color: #bfa100;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 8px;
+    font-weight: 800;
+}
+
+/* Management Grid */
+.manage-grid {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 30px;
+}
+
+/* Responsive Queries */
+@media (max-width: 992px) {
+
+    .walkin-grid,
+    .manage-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-sidebar {
+        left: -260px;
+    }
+
+    .admin-sidebar.active {
+        left: 0;
+    }
+
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+        padding: 20px;
+    }
+
+    .admin-mobile-header {
+        display: flex;
+    }
+
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+    }
+
+    .sidebar-overlay.active {
+        display: block;
+    }
+
+    .grid-stats {
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+    }
+
+    .stat-box {
+        padding: 15px;
+        gap: 10px;
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .stat-box .icon-circle {
+        width: 45px;
+        height: 45px;
+        font-size: 1.1rem;
+    }
+}

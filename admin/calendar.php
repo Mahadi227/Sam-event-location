@@ -1,0 +1,106 @@
+<?php
+// admin/calendar.php
+require_once '../includes/db.php';
+require_once '../includes/auth.php';
+requireAdmin();
+
+$month = $_GET['month'] ?? date('m');
+$year = $_GET['year'] ?? date('Y');
+
+$first_day = "$year-$month-01";
+$days_in_month = date('t', strtotime($first_day));
+$start_day_of_week = date('w', strtotime($first_day));
+
+// Get reservations for this month
+$stmt = $pdo->prepare("SELECT event_date, customer_name, status FROM reservations WHERE MONTH(event_date) = ? AND YEAR(event_date) = ?");
+$stmt->execute([$month, $year]);
+$res_data = [];
+while ($row = $stmt->fetch()) {
+    $res_data[$row['event_date']][] = $row;
+}
+
+$next_month = date('m', strtotime("+1 month", strtotime($first_day)));
+$next_year = date('Y', strtotime("+1 month", strtotime($first_day)));
+$prev_month = date('m', strtotime("-1 month", strtotime($first_day)));
+$prev_year = date('Y', strtotime("-1 month", strtotime($first_day)));
+?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Calendrier - Sam Admin</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .admin-sidebar { width: 260px; background: #1a1c23; height: 100vh; position: fixed; color: #8a8b9f; padding: 25px; }
+        .admin-sidebar a { color: #8a8b9f; text-decoration: none; display: block; padding: 12px; border-radius: 10px; margin-bottom: 5px; }
+        .admin-sidebar a.active { background: #2d2f39; color: white; }
+        .main-content { margin-left: 260px; padding: 40px; background: #f4f5f7; min-height: 100vh; }
+        
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); background: #eee; gap: 1px; border: 1px solid #eee; }
+        .calendar-day { background: white; min-height: 120px; padding: 10px; }
+        .calendar-header { background: #1a1c23; color: white; padding: 10px; text-align: center; font-weight: bold; }
+        .day-num { font-weight: 800; color: #ccc; margin-bottom: 5px; }
+        .res-pill { font-size: 0.7rem; padding: 3px 6px; border-radius: 4px; margin-bottom: 3px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        .pending { background: #fff3cd; color: #856404; }
+        .approved { background: #d4edda; color: #155724; }
+    </style>
+</head>
+<body>
+
+<div class="admin-sidebar">
+    <h2>Sam Management</h2>
+    <a href="dashboard.php"><i class="fas fa-th-large"></i> &nbsp; Dashboard</a>
+    <a href="calendar.php" class="active"><i class="fas fa-calendar-alt"></i> &nbsp; Calendrier</a>
+    <a href="items.php"><i class="fas fa-box"></i> &nbsp; Stock & Produits</a>
+    <a href="reservations.php"><i class="fas fa-calendar-check"></i> &nbsp; Réservations</a>
+    <a href="payments.php"><i class="fas fa-money-bill-wave"></i> &nbsp; Paiements</a>
+    <a href="../logout.php" style="margin-top: 50px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> &nbsp; Déconnexion</a>
+</div>
+
+<div class="main-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h2>Planning des Réservations</h2>
+        <div>
+            <a href="?month=<?php echo $prev_month; ?>&year=<?php echo $prev_year; ?>" class="contact-btn" style="padding: 5px 15px;"><i class="fas fa-chevron-left"></i></a>
+            <span style="font-weight: 800; margin: 0 20px;"><?php echo date('F Y', strtotime($first_day)); ?></span>
+            <a href="?month=<?php echo $next_month; ?>&year=<?php echo $next_year; ?>" class="contact-btn" style="padding: 5px 15px;"><i class="fas fa-chevron-right"></i></a>
+        </div>
+    </div>
+
+    <div class="calendar-grid">
+        <div class="calendar-header">Dim</div>
+        <div class="calendar-header">Lun</div>
+        <div class="calendar-header">Mar</div>
+        <div class="calendar-header">Mer</div>
+        <div class="calendar-header">Jeu</div>
+        <div class="calendar-header">Ven</div>
+        <div class="calendar-header">Sam</div>
+
+        <?php 
+        // Blank cells
+        for ($i = 0; $i < $start_day_of_week; $i++) {
+            echo '<div class="calendar-day" style="background:#f9f9f9;"></div>';
+        }
+
+        // Days of month
+        for ($day = 1; $day <= $days_in_month; $day++) {
+            $date_str = sprintf("%04d-%02d-%02d", $year, $month, $day);
+            $is_today = ($date_str == date('Y-m-d')) ? 'border: 2px solid var(--accent-gold);' : '';
+            echo '<div class="calendar-day" style="'.$is_today.'">';
+            echo '<div class="day-num">'.$day.'</div>';
+            
+            if (isset($res_data[$date_str])) {
+                foreach ($res_data[$date_str] as $r) {
+                    echo '<div class="res-pill '.$r['status'].'">'.htmlspecialchars($r['customer_name']).'</div>';
+                }
+            }
+            
+            echo '</div>';
+        }
+        ?>
+    </div>
+</div>
+
+</body>
+</html>
