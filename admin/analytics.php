@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // admin/analytics.php
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
@@ -35,6 +35,7 @@ $revenue_by_month = $pdo->query("SELECT MONTH(created_at) as month, SUM(amount) 
     <a href="items.php"><i class="fas fa-box"></i> &nbsp; Stock & Produits</a>
     <a href="reservations.php"><i class="fas fa-calendar-check"></i> &nbsp; Réservations</a>
     <a href="payments.php"><i class="fas fa-money-bill-wave"></i> &nbsp; Paiements</a>
+    <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse</a>
     <a href="users.php"><i class="fas fa-users-cog"></i> &nbsp; Utilisateurs</a>
     <a href="settings.php"><i class="fas fa-tools"></i> &nbsp; Paramètres</a>
     <a href="../logout.php" style="margin-top: 50px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> &nbsp; Déconnexion</a>
@@ -80,3 +81,4 @@ $revenue_by_month = $pdo->query("SELECT MONTH(created_at) as month, SUM(amount) 
 
 </body>
 </html>
+

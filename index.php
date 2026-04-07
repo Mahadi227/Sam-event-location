@@ -1,5 +1,10 @@
 <?php
 // index.php
+require_once 'includes/db.php';
+
+// Fetch available items
+$stmt = $pdo->query("SELECT i.*, c.name as category_name FROM items i LEFT JOIN categories c ON i.category_id = c.id WHERE i.status = 'available' ORDER BY i.category_id, i.name");
+$items = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -57,57 +62,22 @@
     </div>
 
     <div class="services-grid">
-        <!-- Service 1 -->
+        <?php foreach ($items as $item): ?>
         <div class="service-card">
-            <div class="service-img" style="background-image: url('https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=600');"></div>
+            <?php 
+                $bgImage = !empty($item['image_url']) ? $item['image_url'] : 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=600'; 
+            ?>
+            <div class="service-img" style="background-image: url('<?php echo htmlspecialchars($bgImage); ?>');"></div>
             <div class="service-info">
-                <h3>Location de Bâches</h3>
-                <p>Des bâches de luxe pour protéger vos invités avec élégance et confort.</p>
+                <h3><?php echo htmlspecialchars($item['name']); ?></h3>
+                <p><?php echo htmlspecialchars($item['description'] ?? 'Location de ' . strtolower($item['category_name']) . ' pour tous vos événements.'); ?></p>
                 <div class="service-footer">
-                    <span class="price-tag">Dès 5 000 FCFA</span>
-                    <a href="booking.php" class="btn-reserve">Réserver</a>
+                    <span class="price-tag"><?php echo number_format($item['price_per_day'], 0, ',', ' '); ?> FCFA / Jour</span>
+                    <a href="booking.php?item=<?php echo $item['id']; ?>" class="btn-reserve">Réserver</a>
                 </div>
             </div>
         </div>
-
-        <!-- Service 2 -->
-        <div class="service-card">
-            <div class="service-img" style="background-image: url('https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&q=80&w=600');"></div>
-            <div class="service-info">
-                <h3>Location de Chaises</h3>
-                <p>Chaises confortables avec housses et décorations selon votre thème.</p>
-                <div class="service-footer">
-                    <span class="price-tag">Dès 100 FCFA</span>
-                    <a href="booking.php" class="btn-reserve">Réserver</a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Service 3 -->
-        <div class="service-card">
-            <div class="service-img" style="background-image: url('https://images.unsplash.com/photo-1478147427282-58a87a120781?auto=format&fit=crop&q=80&w=600');"></div>
-            <div class="service-info">
-                <h3>Décorations Simples</h3>
-                <p>Embellissement de votre espace pour une ambiance mémorable.</p>
-                <div class="service-footer">
-                    <span class="price-tag">Dès 15 000 FCFA</span>
-                    <a href="booking.php" class="btn-reserve">Réserver</a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Service 4 -->
-        <div class="service-card">
-            <div class="service-img" style="background-image: url('https://images.unsplash.com/photo-1531050171669-011ca992f995?auto=format&fit=crop&q=80&w=600');"></div>
-            <div class="service-info">
-                <h3>Livraison & Installation</h3>
-                <p>Service complet de transport et montage pour votre tranquillité.</p>
-                <div class="service-footer">
-                    <span class="price-tag">Sur devis</span>
-                    <a href="booking.php" class="btn-reserve">Réserver</a>
-                </div>
-            </div>
-        </div>
+        <?php endforeach; ?>
     </div>
 </div>
 

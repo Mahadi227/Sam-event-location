@@ -56,6 +56,7 @@ function calculateTotalPrice($items_requested, $params) {
     
     // 4. Promo Code
     $discount = 0;
+    $promo_code_id = null;
     if ($promo_code) {
         $stmt = $pdo->prepare("SELECT * FROM promo_codes WHERE code = ? AND (valid_until >= CURRENT_DATE OR valid_until IS NULL) AND times_used < usage_limit");
         $stmt->execute([$promo_code]);
@@ -64,6 +65,7 @@ function calculateTotalPrice($items_requested, $params) {
         if ($promo) {
             $discount = ($total * ($promo['discount_percent'] / 100));
             $total -= $discount;
+            $promo_code_id = $promo['id'];
         }
     }
     
@@ -71,7 +73,8 @@ function calculateTotalPrice($items_requested, $params) {
         'total' => round($total),
         'base' => $total_base,
         'delivery' => $delivery_total,
-        'discount' => round($discount)
+        'discount' => round($discount),
+        'promo_code_id' => $promo_code_id
     ];
 }
 

@@ -15,6 +15,7 @@ while ($row = $stmt->fetch()) {
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Walk-in Reservation - Sam Event</title>
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="../assets/css/admin.css">
@@ -34,6 +35,9 @@ while ($row = $stmt->fetch()) {
         <a href="dashboard.php"><i class="fas fa-home"></i> &nbsp; Accueil</a>
         <a href="walk_in.php" class="active"><i class="fas fa-plus"></i> &nbsp; Nouveau Walk-in</a>
         <a href="reservations.php"><i class="fas fa-list"></i> &nbsp; Reservations</a>
+        <a href="calendar.php"><i class="fas fa-calendar-alt"></i> &nbsp; Calendrier</a>
+        <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse (Shift)</a>
+        <a href="profile.php"><i class="fas fa-user"></i> &nbsp; Mon Profil</a>
         <a href="../logout.php" style="margin-top: 50px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> &nbsp; Déconnexion</a>
     </div>
 
@@ -70,8 +74,20 @@ while ($row = $stmt->fetch()) {
                     <?php foreach ($items as $cat => $cat_items): ?>
                         <div class="category-title"><strong><?php echo $cat; ?></strong></div>
                         <?php foreach ($cat_items as $it): ?>
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f9f9f9;">
-                                <span><?php echo htmlspecialchars($it['name']); ?> <small>(<?php echo number_format($it['price_per_day'], 0); ?> F)</small></span>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f9f9f9;">
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    <?php if (!empty($it['image_url'])): ?>
+                                        <img src="../<?php echo htmlspecialchars($it['image_url']); ?>" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;">
+                                    <?php else: ?>
+                                        <div style="width: 50px; height: 50px; background: #eee; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #999;">
+                                            <i class="fas fa-image"></i>
+                                        </div>
+                                    <?php endif; ?>
+                                    <div>
+                                        <strong style="color: var(--dark-blue);"><?php echo htmlspecialchars($it['name']); ?></strong><br>
+                                        <small style="color: #666;"><?php echo number_format($it['price_per_day'], 0); ?> F</small>
+                                    </div>
+                                </div>
                                 <input type="number" name="items[<?php echo $it['id']; ?>]" class="item-qty" value="0" min="0" 
                                        data-price="<?php echo $it['price_per_day']; ?>" data-name="<?php echo htmlspecialchars($it['name']); ?>"
                                        style="width: 60px; text-align: center; padding: 5px; border-radius: 5px; border: 1px solid #ccc;">

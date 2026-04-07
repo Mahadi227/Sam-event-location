@@ -1,8 +1,8 @@
 <?php
-// admin/calendar.php
+// receptionist/calendar.php
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
-requireAdmin();
+requireStaff();
 
 $month = $_GET['month'] ?? date('m');
 $year = $_GET['year'] ?? date('Y');
@@ -30,7 +30,7 @@ $prev_year = date('Y', strtotime("-1 month", strtotime($first_day)));
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calendrier - Sam Admin</title>
+    <title>Calendrier - Sam Reception</title>
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="../assets/css/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -71,34 +71,41 @@ $prev_year = date('Y', strtotime("-1 month", strtotime($first_day)));
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
+        color: #fff;
         display: block;
         text-decoration: none;
-        color: inherit;
         transition: transform 0.2s, box-shadow 0.2s;
     }
     .res-pill:hover {
         transform: translateY(-1px);
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
+
+    .pending { background: #f59e0b; color: white; }
+    .approved { background: #10b981; color: white; }
+    .in_preparation { background: #3b82f6; color: white; }
+    .completed { background: #6b7280; color: white; }
+    .cancelled { background: #ef4444; color: white; }
     </style>
 </head>
 
 <body style="background: #f4f5f7;">
 
 <div class="admin-mobile-header">
-    <div style="font-weight: 800; color: white;">Sam Management</div>
+    <div style="font-weight: 800; color: white;">Sam Reception</div>
     <button class="admin-hamburger"><i class="fas fa-bars"></i></button>
 </div>
 
 <div class="admin-container">
+    <div class="sidebar-overlay"></div>
     <div class="admin-sidebar">
-        <h2>Sam Management</h2>
-        <a href="dashboard.php"><i class="fas fa-th-large"></i> &nbsp; Dashboard</a>
+        <h2 style="color: white; margin-bottom: 30px;">Reception Sam</h2>
+        <a href="dashboard.php"><i class="fas fa-home"></i> &nbsp; Accueil</a>
+        <a href="walk_in.php"><i class="fas fa-plus"></i> &nbsp; Nouveau Walk-in</a>
+        <a href="reservations.php"><i class="fas fa-list"></i> &nbsp; Reservations</a>
         <a href="calendar.php" class="active"><i class="fas fa-calendar-alt"></i> &nbsp; Calendrier</a>
-        <a href="items.php"><i class="fas fa-box"></i> &nbsp; Stock & Produits</a>
-        <a href="reservations.php"><i class="fas fa-calendar-check"></i> &nbsp; Réservations</a>
-        <a href="payments.php"><i class="fas fa-money-bill-wave"></i> &nbsp; Paiements</a>
-        <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse</a>
+        <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse (Shift)</a>
+        <a href="profile.php"><i class="fas fa-user"></i> &nbsp; Mon Profil</a>
         <a href="../logout.php" style="margin-top: 50px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> &nbsp; Déconnexion</a>
     </div>
 
@@ -106,9 +113,11 @@ $prev_year = date('Y', strtotime("-1 month", strtotime($first_day)));
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
             <h2>Planning des Réservations</h2>
             <div>
-                <a href="?month=<?php echo $prev_month; ?>&year=<?php echo $prev_year; ?>" class="contact-btn" style="padding: 5px 15px;"><i class="fas fa-chevron-left"></i></a>
+                <a href="?month=<?php echo $prev_month; ?>&year=<?php echo $prev_year; ?>" class="contact-btn"
+                    style="padding: 5px 15px;"><i class="fas fa-chevron-left"></i></a>
                 <span style="font-weight: 800; margin: 0 20px;"><?php echo date('F Y', strtotime($first_day)); ?></span>
-                <a href="?month=<?php echo $next_month; ?>&year=<?php echo $next_year; ?>" class="contact-btn" style="padding: 5px 15px;"><i class="fas fa-chevron-right"></i></a>
+                <a href="?month=<?php echo $next_month; ?>&year=<?php echo $next_year; ?>" class="contact-btn"
+                    style="padding: 5px 15px;"><i class="fas fa-chevron-right"></i></a>
             </div>
         </div>
 

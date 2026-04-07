@@ -6,7 +6,7 @@
 
 .admin-sidebar {
     width: 260px;
-    background: #1a1c23;
+    background: rgba(3, 17, 122, 0.726);
     height: 100vh;
     position: fixed;
     color: #8a8b9f;
@@ -222,5 +222,26 @@
         width: 45px;
         height: 45px;
         font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .grid-stats {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    
+    .main-content h2 {
+        font-size: 1.5rem;
+    }
+    
+    .card {
+        padding: 15px;
+    }
+    
+    .table-responsive table th, 
+    .table-responsive table td {
+        padding: 8px;
+        font-size: 0.9rem;
     }
 }

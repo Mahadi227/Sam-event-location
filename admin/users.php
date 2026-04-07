@@ -15,21 +15,34 @@ if (isset($_POST['save_user'])) {
     $role = $_POST['role'];
     $password = $_POST['password'];
 
+    // Uniqueness validation
     if ($id) {
-        if (!empty($password)) {
-            $hashed = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare("UPDATE users SET name = ?, email = ?, phone = ?, role = ?, password = ? WHERE id = ?");
-            $stmt->execute([$name, $email, $phone, $role, $hashed, $id]);
-        } else {
-            $stmt = $pdo->prepare("UPDATE users SET name = ?, email = ?, phone = ?, role = ? WHERE id = ?");
-            $stmt->execute([$name, $email, $phone, $role, $id]);
-        }
+        $stmt_check = $pdo->prepare("SELECT id FROM users WHERE (email = ? OR phone = ? OR name = ?) AND id != ?");
+        $stmt_check->execute([$email, $phone, $name, $id]);
     } else {
-        $hashed = password_hash($password, PASSWORD_DEFAULT);
-        $stmt = $pdo->prepare("INSERT INTO users (name, email, phone, role, password) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute([$name, $email, $phone, $role, $hashed]);
+        $stmt_check = $pdo->prepare("SELECT id FROM users WHERE (email = ? OR phone = ? OR name = ?)");
+        $stmt_check->execute([$email, $phone, $name]);
     }
-    $msg = "Utilisateur enregistré !";
+
+    if ($stmt_check->fetch()) {
+        $msg = "Erreur: Ce nom, email ou numéro de téléphone est déjà pris par un autre compte.";
+    } else {
+        if ($id) {
+            if (!empty($password)) {
+                $hashed = password_hash($password, PASSWORD_DEFAULT);
+                $stmt = $pdo->prepare("UPDATE users SET name = ?, email = ?, phone = ?, role = ?, password = ? WHERE id = ?");
+                $stmt->execute([$name, $email, $phone, $role, $hashed, $id]);
+            } else {
+                $stmt = $pdo->prepare("UPDATE users SET name = ?, email = ?, phone = ?, role = ? WHERE id = ?");
+                $stmt->execute([$name, $email, $phone, $role, $id]);
+            }
+        } else {
+            $hashed = password_hash($password, PASSWORD_DEFAULT);
+            $stmt = $pdo->prepare("INSERT INTO users (name, email, phone, role, password) VALUES (?, ?, ?, ?, ?)");
+            $stmt->execute([$name, $email, $phone, $role, $hashed]);
+        }
+        $msg = "Utilisateur enregistré !";
+    }
 }
 
 // Delete
@@ -55,14 +68,27 @@ if (!empty($_GET['role'])) {
 }
 
 $whereClause = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
-$users = $pdo->prepare("SELECT * FROM users $whereClause ORDER BY role, name");
+$page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
+if ($page < 1) $page = 1;
+$limit = 10;
+$offset = ($page - 1) * $limit;
+$countStmt = $pdo->prepare("SELECT COUNT(*) FROM users $whereClause");
+$countStmt->execute($params);
+$total_records = $countStmt->fetchColumn();
+$total_pages = ceil($total_records / $limit);
+$users = $pdo->prepare("SELECT * FROM users $whereClause ORDER BY role, name LIMIT $limit OFFSET $offset");
 $users->execute($params);
 $users = $users->fetchAll();
+$query_string_params = $_GET;
+unset($query_string_params['page']);
+$base_url = '?';
+if (!empty($query_string_params)) $base_url = '?' . http_build_query($query_string_params) . '&';
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Utilisateurs - Sam SuperAdmin</title>
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="../assets/css/admin.css">
@@ -82,6 +108,7 @@ $users = $users->fetchAll();
         <a href="items.php"><i class="fas fa-box"></i> &nbsp; Stock & Produits</a>
         <a href="reservations.php"><i class="fas fa-calendar-check"></i> &nbsp; Réservations</a>
         <a href="payments.php"><i class="fas fa-money-bill-wave"></i> &nbsp; Paiements</a>
+        <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse</a>
         <a href="users.php" class="active"><i class="fas fa-users-cog"></i> &nbsp; Utilisateurs</a>
         <a href="settings.php"><i class="fas fa-tools"></i> &nbsp; Paramètres</a>
         <a href="../logout.php" style="margin-top: 50px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> &nbsp; Déconnexion</a>
@@ -152,6 +179,19 @@ $users = $users->fetchAll();
                 </tbody>
             </table>
         </div>
+        <?php if (isset($total_pages) && $total_pages > 1): ?>
+        <div style="margin-top: 20px; display: flex; justify-content: center; gap: 5px; flex-wrap: wrap; padding-bottom: 20px;">
+            <?php if ($page > 1): ?>
+                <a href="<?php echo htmlspecialchars($base_url . 'page=' . ($page - 1)); ?>" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; text-decoration: none; color: #333; background: white;"><i class="fas fa-chevron-left"></i> Précédent</a>
+            <?php endif; ?>
+            <?php for ($i = max(1, $page - 2); $i <= min($total_pages, $page + 2); $i++): ?>
+                <a href="<?php echo htmlspecialchars($base_url . 'page=' . $i); ?>" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; text-decoration: none; <?php echo $i === $page ? 'background: #03117a; color: white; border-color: #03117a;' : 'background: white; color: #333;'; ?>"><?php echo $i; ?></a>
+            <?php endfor; ?>
+            <?php if ($page < $total_pages): ?>
+                <a href="<?php echo htmlspecialchars($base_url . 'page=' . ($page + 1)); ?>" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; text-decoration: none; color: #333; background: white;">Suivant <i class="fas fa-chevron-right"></i></a>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -211,3 +251,4 @@ function editUser(user) {
 
 </body>
 </html>
+

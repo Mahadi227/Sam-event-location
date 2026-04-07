@@ -24,14 +24,36 @@ if (!empty($_GET['search'])) {
 }
 
 $whereClause = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
-$stmt = $pdo->prepare("SELECT * FROM reservations $whereClause ORDER BY created_at DESC");
+
+// Pagination setup
+$page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
+if ($page < 1) $page = 1;
+$limit = 10;
+$offset = ($page - 1) * $limit;
+
+// Count total matching records
+$countStmt = $pdo->prepare("SELECT COUNT(*) FROM reservations $whereClause");
+$countStmt->execute($params);
+$total_records = $countStmt->fetchColumn();
+$total_pages = ceil($total_records / $limit);
+
+$stmt = $pdo->prepare("SELECT * FROM reservations $whereClause ORDER BY created_at DESC LIMIT $limit OFFSET $offset");
 $stmt->execute($params);
 $reservations = $stmt->fetchAll();
+
+// Base URL for pagination
+$query_string_params = $_GET;
+unset($query_string_params['page']);
+$base_url = '?';
+if (!empty($query_string_params)) {
+    $base_url = '?' . http_build_query($query_string_params) . '&';
+}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestion Reservations - Sam Event</title>
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="../assets/css/admin.css">
@@ -51,6 +73,9 @@ $reservations = $stmt->fetchAll();
         <a href="dashboard.php"><i class="fas fa-home"></i> &nbsp; Accueil</a>
         <a href="walk_in.php"><i class="fas fa-plus"></i> &nbsp; Nouveau Walk-in</a>
         <a href="reservations.php" class="active"><i class="fas fa-list"></i> &nbsp; Reservations</a>
+        <a href="calendar.php"><i class="fas fa-calendar-alt"></i> &nbsp; Calendrier</a>
+        <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse (Shift)</a>
+        <a href="profile.php"><i class="fas fa-user"></i> &nbsp; Mon Profil</a>
         <a href="../logout.php" style="margin-top: 50px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> &nbsp; Déconnexion</a>
     </div>
 
@@ -125,6 +150,23 @@ $reservations = $stmt->fetchAll();
                 </tbody>
             </table>
         </div>
+        
+        <!-- Pagination Links -->
+        <?php if (isset($total_pages) && $total_pages > 1): ?>
+        <div style="margin-top: 20px; display: flex; justify-content: center; gap: 5px; flex-wrap: wrap;">
+            <?php if ($page > 1): ?>
+                <a href="<?php echo htmlspecialchars($base_url . 'page=' . ($page - 1)); ?>" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; text-decoration: none; color: #333; background: white;"><i class="fas fa-chevron-left"></i> Précédent</a>
+            <?php endif; ?>
+            
+            <?php for ($i = max(1, $page - 2); $i <= min($total_pages, $page + 2); $i++): ?>
+                <a href="<?php echo htmlspecialchars($base_url . 'page=' . $i); ?>" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; text-decoration: none; <?php echo $i === $page ? 'background: #03117a; color: white; border-color: #03117a;' : 'background: white; color: #333;'; ?>"><?php echo $i; ?></a>
+            <?php endfor; ?>
+            
+            <?php if ($page < $total_pages): ?>
+                <a href="<?php echo htmlspecialchars($base_url . 'page=' . ($page + 1)); ?>" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; text-decoration: none; color: #333; background: white;">Suivant <i class="fas fa-chevron-right"></i></a>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 </div>

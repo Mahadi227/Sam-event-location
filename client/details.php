@@ -1,6 +1,7 @@
 <?php
 // client/details.php
 require_once '../includes/db.php';
+require_once '../includes/auth.php';
 // Token-based access check
 $id = $_GET['id'] ?? null;
 $token = $_GET['token'] ?? null;

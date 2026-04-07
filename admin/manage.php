@@ -1,8 +1,8 @@
-<?php
-// receptionist/manage.php
+﻿<?php
+// admin/manage.php
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
-requireStaff();
+requireAdmin();
 
 $id = $_GET['id'] ?? null;
 if (!$id) die("ID Manquant");
@@ -72,20 +72,23 @@ $payments = $stmt->fetchAll();
 <body style="background: #f4f5f7;">
 
 <div class="admin-mobile-header">
-    <div style="font-weight: 800; color: white;">Sam Reception</div>
+    <div style="font-weight: 800; color: white;">Sam Management</div>
     <button class="admin-hamburger"><i class="fas fa-bars"></i></button>
 </div>
 
 <div class="admin-container">
     <div class="sidebar-overlay"></div>
     <div class="admin-sidebar">
-        <h2 style="color: white; margin-bottom: 30px;">Reception Sam</h2>
-        <a href="dashboard.php"><i class="fas fa-home"></i> &nbsp; Accueil</a>
-        <a href="walk_in.php"><i class="fas fa-plus"></i> &nbsp; Nouveau Walk-in</a>
-        <a href="reservations.php" class="active"><i class="fas fa-list"></i> &nbsp; Reservations</a>
-        <a href="calendar.php"><i class="fas fa-calendar-alt"></i> &nbsp; Calendrier</a>
-        <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse (Shift)</a>
-        <a href="profile.php"><i class="fas fa-user"></i> &nbsp; Mon Profil</a>
+        <h2>Sam Management</h2>
+        <a href="dashboard.php"><i class="fas fa-th-large"></i> &nbsp; Dashboard</a>
+        <a href="items.php"><i class="fas fa-box"></i> &nbsp; Stock & Produits</a>
+        <a href="reservations.php" class="active"><i class="fas fa-calendar-check"></i> &nbsp; Réservations</a>
+        <a href="payments.php"><i class="fas fa-money-bill-wave"></i> &nbsp; Paiements</a>
+        <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse</a>
+        <?php if (hasRole('super_admin')): ?>
+            <a href="users.php"><i class="fas fa-users-cog"></i> &nbsp; Utilisateurs</a>
+            <a href="settings.php"><i class="fas fa-tools"></i> &nbsp; Paramètres</a>
+        <?php endif; ?>
         <a href="../logout.php" style="margin-top: 50px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> &nbsp; Déconnexion</a>
     </div>
 
@@ -182,8 +185,10 @@ $payments = $stmt->fetchAll();
                     <select name="status" class="form-control" style="width: 100%; padding: 10px; margin: 10px 0;">
                         <option value="pending" <?php if ($res['status'] == 'pending') echo 'selected'; ?>>En attente</option>
                         <option value="approved" <?php if ($res['status'] == 'approved') echo 'selected'; ?>>Approuvée</option>
+                        <option value="in_preparation" <?php if ($res['status'] == 'in_preparation') echo 'selected'; ?>>Préparation</option>
                         <option value="rejected" <?php if ($res['status'] == 'rejected') echo 'selected'; ?>>Rejetée</option>
                         <option value="completed" <?php if ($res['status'] == 'completed') echo 'selected'; ?>>Terminée</option>
+                        <option value="cancelled" <?php if ($res['status'] == 'cancelled') echo 'selected'; ?>>Annulée</option>
                     </select>
                     <button type="submit" name="update_status" class="contact-btn" style="width:100%; border:none; padding:10px;">Mettre à jour</button>
                 </form>
@@ -235,3 +240,4 @@ $payments = $stmt->fetchAll();
 <script src="../assets/js/admin.js"></script>
 </body>
 </html>
+
