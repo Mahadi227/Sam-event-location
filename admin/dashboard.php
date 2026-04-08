@@ -73,6 +73,8 @@ for ($i = 5; $i >= 0; $i--) {
             <a href="reservations.php"><i class="fas fa-calendar-check"></i> &nbsp; Réservations</a>
             <a href="payments.php"><i class="fas fa-money-bill-wave"></i> &nbsp; Paiements</a>
             <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse</a>
+            <a href="profile.php" class="active"><i class="fas fa-user"></i> &nbsp; Mon Profil</a>
+
 
             <?php if (hasRole('super_admin')): ?>
                 <div

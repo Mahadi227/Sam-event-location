@@ -2,6 +2,7 @@
 // process_booking_ai.php
 require_once 'includes/db.php';
 require_once 'includes/engine.php';
+require_once 'includes/mailer.php';
 session_start();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -15,6 +16,7 @@ try {
     $user_id = $_SESSION['user_id'] ?? null;
     $customer_name = $_POST['customer_name'] ?? ($_SESSION['name'] ?? 'Client');
     $customer_phone = $_POST['customer_phone'] ?? '';
+    $customer_email = $_POST['customer_email'] ?? null;
     $event_date = $_POST['event_date'];
     $event_location = $_POST['location'];
     $duration = (int)$_POST['duration'];
@@ -102,6 +104,9 @@ try {
     curl_setopt($ch, CURLOPT_TIMEOUT, 1);
     curl_exec($ch);
     curl_close($ch);
+
+    // Send Validation Email
+    sendReservationEmail($pdo, $reservation_id, $customer_email);
 
     $is_ajax = (!empty($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
 

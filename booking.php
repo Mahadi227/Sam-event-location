@@ -188,6 +188,10 @@ while ($row = $stmt->fetch()) {
                                 <input type="tel" name="customer_phone" class="form-control" value="<?php echo $_SESSION['phone'] ?? ''; ?>" required placeholder="Ex: 96112233" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd;">
                             </div>
                         </div>
+                        <div class="form-group" style="margin-top: 15px; margin-bottom: 15px;">
+                            <label>Email (Optionnel)</label>
+                            <input type="email" name="customer_email" class="form-control" placeholder="Pour recevoir votre reçu de réservation" style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #ddd;">
+                        </div>
                         <div class="responsive-grid">
                             <div class="form-group">
                                 <label>Lieu exact à Niamey</label>

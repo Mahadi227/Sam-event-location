@@ -34,9 +34,9 @@ $items = $stmt->fetchAll();
             <li><a href="index.php">Accueil</a></li>
             <li><a href="#services">Services</a></li>
             <li><a href="booking.php">Réservation</a></li>
-            <li><a href="track_reservation.php" style="color: var(--accent-gold); font-weight: 700;"><i class="fas fa-search"></i> Suivre</a></li>
-            <li><a href="login.php" style="color: var(--secondary-orange); font-weight: 800;">Connexion</a></li>
             <li><a href="#contact">Contact</a></li>
+            <li><a href="track_reservation.php" style="color: var(--accent-gold); font-weight: 700;"><i class="fas fa-search"></i> Suivre</a></li>
+            <li><a href="login.php" style="color: var(--secondary-orange); font-weight: 800;"><i class="fas fa-user-circle"></i> Connexion</a></li>
         </ul>
         <a href="tel:+22796124490" class="contact-btn-mobile" style="display:none;">
             <i class="fas fa-phone-alt"></i> Appeler +227 96 12 44 90

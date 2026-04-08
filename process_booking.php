@@ -1,12 +1,14 @@
 <?php
 // process_booking.php
 require_once 'includes/db.php';
+require_once 'includes/mailer.php';
 session_start();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user_id = $_SESSION['user_id'] ?? null;
     $customer_name = $_POST['customer_name'] ?? '';
     $customer_phone = $_POST['customer_phone'] ?? '';
+    $customer_email = $_POST['customer_email'] ?? null;
     $event_date = $_POST['event_date'] ?? '';
     $event_location = $_POST['event_location'] ?? '';
     $total_price = $_POST['total_price'] ?? 0;
@@ -42,6 +44,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $pdo->commit();
+        
+        // Send Notification Email
+        sendReservationEmail($pdo, $reservation_id, $customer_email);
         
         header("Location: confirmation.php?id=" . $reservation_id);
         exit;

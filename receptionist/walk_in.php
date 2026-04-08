@@ -59,6 +59,10 @@ while ($row = $stmt->fetch()) {
                             <input type="tel" name="customer_phone" class="form-control" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
                         </div>
                     </div>
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>Email (Optionnel - Pour le reçu)</label>
+                        <input type="email" name="customer_email" class="form-control" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                    </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
                         <div class="form-group">
                             <label>Date de l'événement</label>
