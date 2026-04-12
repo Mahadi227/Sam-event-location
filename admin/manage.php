@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // admin/manage.php
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
@@ -12,6 +12,20 @@ if (isset($_POST['update_status'])) {
     $new_status = $_POST['status'];
     $stmt = $pdo->prepare("UPDATE reservations SET status = ? WHERE id = ?");
     $stmt->execute([$new_status, $id]);
+}
+
+// Process info update
+if (isset($_POST['update_info'])) {
+    $name = $_POST['customer_name'];
+    $phone = $_POST['customer_phone'];
+    $date = $_POST['event_date'];
+    $location = $_POST['event_location'];
+    
+    $stmt = $pdo->prepare("UPDATE reservations SET customer_name = ?, customer_phone = ?, event_date = ?, event_location = ? WHERE id = ?");
+    $stmt->execute([$name, $phone, $date, $location, $id]);
+    
+    header("Location: manage.php?id=" . $id . "&success=1");
+    exit;
 }
 
 // Process payment
@@ -101,8 +115,18 @@ $payments = $stmt->fetchAll();
     <div class="manage-grid">
         <div class="left-col">
             <div class="card">
-                <h3>Infos Client & Événement</h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3 style="margin: 0;">Infos Client & Événement</h3>
+                    <button type="button" onclick="document.getElementById('editInfoForm').style.display='block'; document.getElementById('viewInfo').style.display='none';" class="contact-btn" style="padding: 5px 15px; font-size: 0.85rem; background: #6366f1; border: none; cursor: pointer;"><i class="fas fa-edit"></i> Modifier</button>
+                </div>
+
+                <?php if (isset($_GET['success'])): ?>
+                    <div style="background: #dcfce7; color: #166534; padding: 10px; border-radius: 8px; margin-top: 15px; font-size: 0.9rem; font-weight: 600;">
+                        Informations mises à jour ✅
+                    </div>
+                <?php endif; ?>
+
+                <div id="viewInfo" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
                     <div>
                         <p style="color: #666; font-size: 0.85rem;">Client</p>
                         <p><strong><?php echo htmlspecialchars($res['customer_name']); ?></strong></p>
@@ -114,6 +138,31 @@ $payments = $stmt->fetchAll();
                         <p><?php echo htmlspecialchars($res['event_location']); ?></p>
                     </div>
                 </div>
+
+                <form id="editInfoForm" method="POST" style="display:none; margin-top: 20px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div class="form-group">
+                            <label style="font-size: 0.85rem; font-weight: 600;">Nom du Client</label>
+                            <input type="text" name="customer_name" class="form-control" value="<?php echo htmlspecialchars($res['customer_name']); ?>" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size: 0.85rem; font-weight: 600;">Téléphone</label>
+                            <input type="text" name="customer_phone" class="form-control" value="<?php echo htmlspecialchars($res['customer_phone']); ?>" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size: 0.85rem; font-weight: 600;">Date</label>
+                            <input type="date" name="event_date" class="form-control" value="<?php echo htmlspecialchars($res['event_date']); ?>" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size: 0.85rem; font-weight: 600;">Lieu</label>
+                            <input type="text" name="event_location" class="form-control" value="<?php echo htmlspecialchars($res['event_location']); ?>" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                        </div>
+                    </div>
+                    <div style="margin-top: 20px; display: flex; gap: 10px;">
+                        <button type="submit" name="update_info" class="contact-btn" style="border:none; padding: 12px 15px; cursor: pointer; flex: 1;">Enregistrer les modifs</button>
+                        <button type="button" onclick="document.getElementById('editInfoForm').style.display='none'; document.getElementById('viewInfo').style.display='grid';" style="padding: 12px 15px; background: #e5e7eb; border: none; border-radius: 8px; cursor: pointer; color: #374151;">Annuler</button>
+                    </div>
+                </form>
             </div>
 
             <div class="card">

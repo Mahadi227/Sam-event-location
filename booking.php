@@ -225,6 +225,7 @@ while ($row = $stmt->fetch()) {
                             <button type="button" class="btn-reserve" onclick="nextStep(2)" style="flex:1; background: #888;">← Retour</button>
                             <button type="submit" class="contact-btn" style="flex:2; border:none; cursor: pointer;">Confirmer la Réservation ✓</button>
                         </div>
+                        <div id="errorDetails" style="margin-top: 15px;"></div>
                     </div>
 
                     <!-- STEP 4: SUCCESS -->
@@ -250,6 +251,7 @@ while ($row = $stmt->fetch()) {
                         <span id="displayTotal">0 F</span>
                     </div>
                     <div style="margin-top: 15px; font-size: 0.8rem; color: #666;">
+                        <i class="fas fa-calendar-alt" style="margin-right: 5px;"></i> Durée: <span id="displayDuration">1 jour(s)</span><br>
                         <i class="fas fa-truck" style="margin-right: 5px;"></i> Livraison: <span id="displayDelivery">--</span><br>
                         <i class="fas fa-tag" style="margin-right: 5px;"></i> Remise: <span id="displayDiscount">0 F</span>
                     </div>
@@ -303,6 +305,7 @@ while ($row = $stmt->fetch()) {
             const result = await res.json();
 
             // Update UI
+            document.getElementById('displayDuration').innerText = data.duration + ' jour(s)';
             document.getElementById('displayTotal').innerText = result.total.toLocaleString() + ' F';
             document.getElementById('displayDelivery').innerText = result.delivery.toLocaleString() + ' F';
             
@@ -361,6 +364,7 @@ while ($row = $stmt->fetch()) {
             const totalText = document.getElementById('displayTotal').innerText;
             const deliveryText = document.getElementById('displayDelivery').innerText;
             const discountText = document.getElementById('displayDiscount').innerText;
+            const durationText = document.getElementById('displayDuration').innerText;
             
             document.getElementById('finalReview').innerHTML = `
                 <div style="background: #f9f9f9; padding: 20px; border-radius: 10px; border: 1px solid #eee;">
@@ -368,6 +372,10 @@ while ($row = $stmt->fetch()) {
                     ${summaryHtml}
                     <hr style="margin: 15px 0; border: none; border-top: 1px dashed #ddd;">
                     <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: #666;">
+                        <span>Durée de location:</span>
+                        <span>${durationText}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: #666; margin-top: 5px;">
                         <span>Frais de livraison:</span>
                         <span>${deliveryText}</span>
                     </div>
@@ -409,7 +417,17 @@ while ($row = $stmt->fetch()) {
                         <a href="track_reservation.php" class="contact-btn" style="display: inline-block; margin-top: 20px;">Tableau de bord</a>
                     `;
                 } else {
-                    alert('Erreur: ' + (data.error || 'Une erreur est survenue'));
+                    document.getElementById('errorDetails').innerHTML = `
+                        <div style="background: #fef2f2; border-left: 4px solid #ef4444; color: #991b1b; padding: 15px 20px; border-radius: 8px; text-align: left; box-shadow: 0 2px 10px rgba(239, 68, 68, 0.1); margin-top: 5px;">
+                            <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                                <i class="fas fa-exclamation-circle" style="color: #ef4444; font-size: 1.2rem; margin-right: 10px;"></i>
+                                <strong style="font-size: 1.1rem;">Action requise</strong>
+                            </div>
+                            <div style="margin-left: 28px; line-height: 1.4; font-size: 0.95rem;">
+                                ${data.error || 'Une erreur est survenue lors de la réservation.'}
+                            </div>
+                        </div>
+                    `;
                     submitBtn.innerText = originalText;
                     submitBtn.disabled = false;
                 }

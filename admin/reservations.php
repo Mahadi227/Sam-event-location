@@ -115,8 +115,13 @@ if (!empty($query_string_params)) $base_url = '?' . http_build_query($query_stri
     </div>
 
     <div class="main-content">
-        <h2>Toutes les Réservations <?php echo $promo_info ? "<span style='color: var(--primary-blue); font-size: 1.2rem;'><br><i class='fas fa-tag'></i> Code Promo: " . htmlspecialchars($promo_info) . "</span>" : ""; ?></h2>
-        <p style="color: #666; margin-bottom: 30px;">Gestion centralisée de toutes les réservations du système.</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+            <div>
+                <h2 style="margin: 0;">Toutes les Réservations <?php echo $promo_info ? "<span style='color: var(--primary-blue); font-size: 1.2rem;'><br><i class='fas fa-tag'></i> Code Promo: " . htmlspecialchars($promo_info) . "</span>" : ""; ?></h2>
+                <p style="color: #666; margin-top: 5px;">Gestion centralisée de toutes les réservations du système.</p>
+            </div>
+            <a href="create_reservation.php" class="contact-btn" style="padding: 10px 20px; border: none; text-decoration: none;">+ Nouvelle Réservation</a>
+        </div>
 
         <!-- Filter Bar -->
         <div class="card" style="margin-bottom: 30px; padding: 20px;">

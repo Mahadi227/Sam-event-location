@@ -140,6 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['proof'])) {
                 <h3>Infos Événement</h3>
                 <div style="margin-top: 15px;">
                     <p><strong>Date :</strong> <?php echo date('d/m/Y', strtotime($res['event_date'])); ?></p>
+                    <p><strong>Durée :</strong> <?php echo htmlspecialchars($res['duration_days'] ?? 1); ?> jour(s)</p>
                     <p><strong>Lieu :</strong> <?php echo htmlspecialchars($res['event_location']); ?></p>
                     <p><strong>Client :</strong> <?php echo htmlspecialchars($res['customer_name']); ?></p>
                     <p><strong>Tel :</strong> <?php echo htmlspecialchars($res['customer_phone']); ?></p>

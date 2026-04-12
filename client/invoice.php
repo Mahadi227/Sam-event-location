@@ -102,6 +102,8 @@ $qr_url = "https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=" . urlen
             <strong>À:</strong><br>
             <?php echo htmlspecialchars($res['customer_name']); ?><br>
             <?php echo htmlspecialchars($res['customer_phone']); ?><br>
+            Date prévue: <?php echo date('d/m/Y', strtotime($res['event_date'])); ?><br>
+            Durée: <?php echo htmlspecialchars($res['duration_days'] ?? 1); ?> jour(s)<br>
             Lieu: <?php echo htmlspecialchars($res['event_location']); ?>
         </div>
     </div>

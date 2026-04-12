@@ -1,8 +1,8 @@
 <?php
-// receptionist/walk_in.php
+// admin/create_reservation.php
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
-requireStaff();
+requireAdmin();
 
 // Get items
 $stmt = $pdo->query("SELECT c.name as cat_name, i.* FROM items i JOIN categories c ON i.category_id = c.id WHERE i.status = 'available'");
@@ -16,7 +16,7 @@ while ($row = $stmt->fetch()) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Walk-in Reservation - Sam Event</title>
+    <title>Nouvelle Réservation - Sam Admin</title>
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="../assets/css/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -24,25 +24,28 @@ while ($row = $stmt->fetch()) {
 <body style="background: #f4f5f7;">
 
 <div class="admin-mobile-header">
-    <div style="font-weight: 800; color: white;">Sam Reception</div>
+    <div style="font-weight: 800; color: white;">Sam Management</div>
     <button class="admin-hamburger"><i class="fas fa-bars"></i></button>
 </div>
 
 <div class="admin-container">
     <div class="sidebar-overlay"></div>
     <div class="admin-sidebar">
-        <h2 style="color: white; margin-bottom: 30px;">Reception Sam</h2>
-        <a href="dashboard.php"><i class="fas fa-home"></i> &nbsp; Accueil</a>
-        <a href="walk_in.php" class="active"><i class="fas fa-plus"></i> &nbsp; Nouveau Walk-in</a>
-        <a href="reservations.php"><i class="fas fa-list"></i> &nbsp; Reservations</a>
-        <a href="calendar.php"><i class="fas fa-calendar-alt"></i> &nbsp; Calendrier</a>
-        <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse (Shift)</a>
-        <a href="profile.php"><i class="fas fa-user"></i> &nbsp; Mon Profil</a>
+        <h2>Sam Management</h2>
+        <a href="dashboard.php"><i class="fas fa-th-large"></i> &nbsp; Dashboard</a>
+        <a href="items.php"><i class="fas fa-box"></i> &nbsp; Stock & Produits</a>
+        <a href="reservations.php" class="active"><i class="fas fa-calendar-check"></i> &nbsp; Réservations</a>
+        <a href="payments.php"><i class="fas fa-money-bill-wave"></i> &nbsp; Paiements</a>
+        <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse</a>
+        <?php if (hasRole('super_admin')): ?>
+            <a href="users.php"><i class="fas fa-users-cog"></i> &nbsp; Utilisateurs</a>
+            <a href="settings.php"><i class="fas fa-tools"></i> &nbsp; Paramètres</a>
+        <?php endif; ?>
         <a href="../logout.php" style="margin-top: 50px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> &nbsp; Déconnexion</a>
     </div>
 
     <div class="main-content">
-        <h2>Nouvelle Réservation (Sur place)</h2>
+        <h2>Nouvelle Réservation</h2>
 
     <form id="walkinForm" action="../process_booking_ai.php" method="POST">
         <div class="walkin-grid" style="margin-top: 20px;">
@@ -87,7 +90,7 @@ while ($row = $stmt->fetch()) {
 
                     <h3 style="margin-top: 30px;">Matériel</h3>
                     <?php foreach ($items as $cat => $cat_items): ?>
-                        <div class="category-title"><strong><?php echo $cat; ?></strong></div>
+                        <div class="category-title"><strong><?php echo htmlspecialchars($cat); ?></strong></div>
                         <?php foreach ($cat_items as $it): ?>
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f9f9f9;">
                                 <div style="display: flex; align-items: center; gap: 15px;">
@@ -248,6 +251,8 @@ while ($row = $stmt->fetch()) {
                     <div style="background: #dcfce7; color: #166534; padding: 15px; border-radius: 8px; text-align: center;">
                         <strong>Réservation #${data.reservation_id} Créée !</strong><br>
                         <a href="../client/invoice.php?id=${data.reservation_id}" target="_blank" class="contact-btn" style="display: inline-block; margin-top: 10px; width: 100%; text-align: center; background: var(--dark-blue); border: none;"><i class="fas fa-print"></i> Imprimer Facture</a>
+                        <br>
+                        <a href="reservations.php" style="display: inline-block; margin-top: 10px; width: 100%; color: var(--primary-blue); font-weight: bold;">Retour aux réservations</a>
                     </div>
                 `;
                 submitBtn.style.display = 'none'; 

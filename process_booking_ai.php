@@ -24,29 +24,39 @@ try {
     $items_requested = $_POST['items'] ?? [];
     $promo_code = $_POST['promo_code'] ?? null;
 
-    // --- AUTOMATIC ACCOUNT CREATION ---
-    if (!$user_id) {
-        // Check if user with this phone or name exists
-        $stmt_user = $pdo->prepare("SELECT id, name FROM users WHERE phone = ? OR name = ?");
-        $stmt_user->execute([$customer_phone, $customer_name]);
+    // --- AUTOMATIC ACCOUNT CREATION or CUSTOMER LOOKUP ---
+    $is_staff = isset($_SESSION['role']) && in_array($_SESSION['role'], ['super_admin', 'mini_admin', 'receptionist']);
+    $target_user_id = null;
+
+    if (!$is_staff && $user_id) {
+        // Normal logged-in client
+        $target_user_id = $user_id;
+    } else {
+        // Look up customer by phone or name
+        $stmt_user = $pdo->prepare("SELECT id, name FROM users WHERE phone = ?");
+        $stmt_user->execute([$customer_phone]);
         $existing_user = $stmt_user->fetch();
 
         if ($existing_user) {
-            $user_id = $existing_user['id'];
+            $target_user_id = $existing_user['id'];
         } else {
-            // Create new user
+            // Create new client user
             $hashed_password = password_hash($customer_phone, PASSWORD_DEFAULT);
             $stmt_new = $pdo->prepare("INSERT INTO users (name, phone, password, role, email) VALUES (?, ?, ?, 'client', NULL)");
             $stmt_new->execute([$customer_name, $customer_phone, $hashed_password]);
-            $user_id = $pdo->lastInsertId();
+            $target_user_id = $pdo->lastInsertId();
         }
 
-        // Auto-login
-        $_SESSION['user_id'] = $user_id;
-        $_SESSION['name'] = $customer_name;
-        $_SESSION['phone'] = $customer_phone;
-        $_SESSION['role'] = 'client';
+        if (!$is_staff) {
+            // Auto-login for normal visitor (not already logged in as staff)
+            $_SESSION['user_id'] = $target_user_id;
+            $_SESSION['name'] = $customer_name;
+            $_SESSION['phone'] = $customer_phone;
+            $_SESSION['role'] = 'client';
+        }
     }
+    
+    $user_id = $target_user_id; // Set target user for the reservation
     // ---------------------------------
 
     // 1. Re-calculate total server-side for security
@@ -63,7 +73,10 @@ try {
 
         $available = getAvailableStock($item_id, $event_date);
         if ($qty > $available) {
-            throw new Exception("Stock insuffisant pour " . $item_id . " à cette date (" . $available . " restants).");
+            $stmt_name = $pdo->prepare("SELECT name FROM items WHERE id = ?");
+            $stmt_name->execute([$item_id]);
+            $item_name = $stmt_name->fetchColumn() ?: "ID $item_id";
+            throw new Exception("Stock insuffisant pour l'article « " . $item_name . " » à cette date (" . $available . " restants en stock quant à la demande de " . $qty . ").");
         }
     }
 
