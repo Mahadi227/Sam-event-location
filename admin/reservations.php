@@ -4,20 +4,42 @@ require_once '../includes/db.php';
 require_once '../includes/auth.php';
 requireAdmin();
 
-// Handle deletion
-if (isset($_GET['delete']) && hasRole('super_admin')) {
+// Handle single or bulk deletion
+$deleted_count = 0;
+if (isset($_POST['bulk_delete']) && hasRole('super_admin')) {
+    $ids = $_POST['reservation_ids'] ?? [];
+    if (!empty($ids)) {
+        foreach ($ids as $res_id) {
+            $pdo->beginTransaction();
+            try {
+                $pdo->prepare("DELETE FROM stock_log WHERE reservation_id = ?")->execute([$res_id]);
+                $pdo->prepare("DELETE FROM payments WHERE reservation_id = ?")->execute([$res_id]);
+                $pdo->prepare("DELETE FROM reservation_items WHERE reservation_id = ?")->execute([$res_id]);
+                $pdo->prepare("DELETE FROM reservations WHERE id = ?")->execute([$res_id]);
+                $pdo->commit();
+                $deleted_count++;
+            } catch (Exception $e) {
+                $pdo->rollBack();
+            }
+        }
+        header("Location: reservations.php?msg=deleted&count=" . $deleted_count);
+        exit;
+    }
+} elseif (isset($_GET['delete']) && hasRole('super_admin')) {
     $res_id = $_GET['delete'];
     $pdo->beginTransaction();
     try {
+        $pdo->prepare("DELETE FROM stock_log WHERE reservation_id = ?")->execute([$res_id]);
         $pdo->prepare("DELETE FROM payments WHERE reservation_id = ?")->execute([$res_id]);
         $pdo->prepare("DELETE FROM reservation_items WHERE reservation_id = ?")->execute([$res_id]);
         $pdo->prepare("DELETE FROM reservations WHERE id = ?")->execute([$res_id]);
         $pdo->commit();
+        header("Location: reservations.php?msg=deleted&count=1");
+        exit;
     } catch (Exception $e) {
         $pdo->rollBack();
+        die("Erreur de suppression : " . $e->getMessage());
     }
-    header("Location: reservations.php");
-    exit;
 }
 
 // Build Filter Query
@@ -165,36 +187,49 @@ if (!empty($query_string_params)) $base_url = '?' . http_build_query($query_stri
         </div>
 
         <div class="card">
-            <div class="table-responsive">
-                <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
-            <thead>
-                <tr style="text-align: left; border-bottom: 2px solid #eee;">
-                    <th style="padding: 15px;">Date</th>
-                    <th style="padding: 15px;">Client</th>
-                    <th style="padding: 15px;">Total</th>
-                    <th style="padding: 15px;">Payé</th>
-                    <th style="padding: 15px;">Statut</th>
-                    <th style="padding: 15px;">Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($reservations as $r): ?>
-                <tr style="border-bottom: 1px solid #f9f9f9;">
-                    <td style="padding: 15px;"><?php echo date('d/m/y', strtotime($r['event_date'])); ?></td>
-                    <td style="padding: 15px;">
-                        <strong><?php echo htmlspecialchars($r['customer_name']); ?></strong><br>
-                        <small><?php echo htmlspecialchars($r['customer_phone']); ?></small>
-                    </td>
-                    <td style="padding: 15px;"><?php echo number_format($r['total_price'], 0); ?> F</td>
-                    <td style="padding: 15px;"><?php echo number_format($r['amount_paid'], 0); ?> F</td>
-                    <td style="padding: 15px;"><span class="status-badge <?php echo $r['status']; ?>"><?php echo strtoupper($r['status']); ?></span></td>
-                    <td style="padding: 15px;">
-                        <a href="manage.php?id=<?php echo $r['id']; ?>" style="color: #4338ca; margin-right: 15px;"><i class="fas fa-eye"></i></a>
+            <form method="POST">
+                <?php if (hasRole('super_admin')): ?>
+                    <button type="submit" name="bulk_delete" onclick="return confirm('Confirmez-vous la suppression des réservations sélectionnées ? Cette action est irréversible.')" class="btn-reserve" style="background:#ef4444; border:none; padding:10px 15px; margin-bottom:15px; cursor:pointer;"><i class="fas fa-trash"></i> Supprimer la sélection</button>
+                <?php endif; ?>
+                <div class="table-responsive">
+                    <table style="width: 100%; border-collapse: collapse; min-width: 600px;">
+                <thead>
+                    <tr style="text-align: left; border-bottom: 2px solid #eee;">
                         <?php if (hasRole('super_admin')): ?>
-                            <a href="?delete=<?php echo $r['id']; ?>" onclick="return confirm('Supprimer définitivement ?')" style="color: #ef4444;"><i class="fas fa-trash"></i></a>
+                        <th style="padding: 15px; width: 40px;"><input type="checkbox" id="selectAll"></th>
                         <?php endif; ?>
-                    </td>
-                </tr>
+                        <th style="padding: 15px;">Date</th>
+                        <th style="padding: 15px;">Client</th>
+                        <th style="padding: 15px;">Total</th>
+                        <th style="padding: 15px;">Payé</th>
+                        <th style="padding: 15px;">Statut</th>
+                        <th style="padding: 15px;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($reservations as $r): ?>
+                    <tr style="border-bottom: 1px solid #f9f9f9;">
+                        <?php if (hasRole('super_admin')): ?>
+                        <td style="padding: 15px;">
+                            <input type="checkbox" name="reservation_ids[]" value="<?php echo $r['id']; ?>" class="row-checkbox">
+                        </td>
+                        <?php endif; ?>
+                        <td style="padding: 15px;"><?php echo date('d/m/y', strtotime($r['event_date'])); ?></td>
+                        <td style="padding: 15px;">
+                            <strong><?php echo htmlspecialchars($r['customer_name']); ?></strong><br>
+                            <small><?php echo htmlspecialchars($r['customer_phone']); ?></small>
+                        </td>
+                        <td style="padding: 15px;"><?php echo number_format($r['total_price'], 0); ?> F</td>
+                        <td style="padding: 15px;"><?php echo number_format($r['amount_paid'], 0); ?> F</td>
+                        <td style="padding: 15px;"><span class="status-badge <?php echo $r['status']; ?>"><?php echo strtoupper($r['status']); ?></span></td>
+                        <td style="padding: 15px;">
+                            <a href="manage.php?id=<?php echo $r['id']; ?>" style="color: #4338ca; margin-right: 10px;" title="Voir"><i class="fas fa-eye"></i></a>
+                            <a href="manage.php?id=<?php echo $r['id']; ?>&edit=1" style="color: #6366f1; margin-right: 15px;" title="Modifier"><i class="fas fa-edit"></i></a>
+                            <?php if (hasRole('super_admin')): ?>
+                                <a href="?delete=<?php echo $r['id']; ?>" onclick="return confirm('Confirmez-vous la suppression définitive ?')" style="color: #ef4444;"><i class="fas fa-trash"></i></a>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
@@ -215,6 +250,16 @@ if (!empty($query_string_params)) $base_url = '?' . http_build_query($query_stri
 </div>
 
 <script src="../assets/js/admin.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAll = document.getElementById('selectAll');
+    if (selectAll) {
+        selectAll.addEventListener('change', function(e) {
+            document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = e.target.checked);
+        });
+    }
+});
+</script>
 </body>
 </html>
 

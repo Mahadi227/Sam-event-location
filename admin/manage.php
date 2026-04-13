@@ -2,6 +2,7 @@
 // admin/manage.php
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
+require_once '../includes/engine.php';
 requireAdmin();
 
 $id = $_GET['id'] ?? null;
@@ -14,15 +15,111 @@ if (isset($_POST['update_status'])) {
     $stmt->execute([$new_status, $id]);
 }
 
+// Process items update
+if (isset($_POST['update_items'])) {
+    $new_items = $_POST['items'] ?? [];
+    
+    $processed_items = [];
+    foreach ($new_items as $item_id => $qty) {
+        $qty = (int)$qty;
+        if ($qty > 0) {
+            $processed_items[$item_id] = $qty;
+        }
+    }
+    
+    $stmt = $pdo->prepare("SELECT duration_days, distance_km, event_date, promo_code_id FROM reservations WHERE id = ?");
+    $stmt->execute([$id]);
+    $res_data = $stmt->fetch();
+    
+    $promo_str = null;
+    if ($res_data['promo_code_id']) {
+        $stmt = $pdo->prepare("SELECT code FROM promo_codes WHERE id = ?");
+        $stmt->execute([$res_data['promo_code_id']]);
+        $promo_str = $stmt->fetchColumn();
+    }
+    
+    $is_weekend = (date('N', strtotime($res_data['event_date'])) >= 6);
+    
+    $params = [
+        'duration_days' => $res_data['duration_days'],
+        'distance_km' => $res_data['distance_km'],
+        'is_weekend' => $is_weekend,
+        'promo_code' => $promo_str
+    ];
+    
+    $pricing = calculateTotalPrice($processed_items, $params);
+    
+    try {
+        $pdo->beginTransaction();
+        
+        $stmt = $pdo->prepare("DELETE FROM reservation_items WHERE reservation_id = ?");
+        $stmt->execute([$id]);
+        
+        foreach ($processed_items as $item_id => $qty) {
+            $stmt = $pdo->prepare("SELECT price_per_day FROM items WHERE id = ?");
+            $stmt->execute([$item_id]);
+            $price_at_time = $stmt->fetchColumn();
+            
+            $stmt = $pdo->prepare("INSERT INTO reservation_items (reservation_id, item_id, quantity, price_at_time) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$id, $item_id, $qty, $price_at_time]);
+        }
+        
+        $stmt = $pdo->prepare("UPDATE reservations SET total_price = ?, discount_amount = ?, promo_code_id = ? WHERE id = ?");
+        $stmt->execute([$pricing['total'], $pricing['discount'], $pricing['promo_code_id'], $id]);
+        
+        $pdo->commit();
+        header("Location: manage.php?id=" . $id . "&success_items=1");
+        exit;
+        
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        die("Erreur mise à jour articles : " . $e->getMessage());
+    }
+}
+
 // Process info update
 if (isset($_POST['update_info'])) {
     $name = $_POST['customer_name'];
     $phone = $_POST['customer_phone'];
     $date = $_POST['event_date'];
     $location = $_POST['event_location'];
+    $duration_days = (int)($_POST['duration_days'] ?? 1);
+    $distance_km = (int)($_POST['distance_km'] ?? 0);
     
-    $stmt = $pdo->prepare("UPDATE reservations SET customer_name = ?, customer_phone = ?, event_date = ?, event_location = ? WHERE id = ?");
-    $stmt->execute([$name, $phone, $date, $location, $id]);
+    // We need to recalculate prices because duration/distance/date(weekend) changed
+    $stmt = $pdo->prepare("SELECT promo_code_id FROM reservations WHERE id = ?");
+    $stmt->execute([$id]);
+    $res_promo = $stmt->fetchColumn();
+    
+    $promo_str = null;
+    if ($res_promo) {
+        $stmt = $pdo->prepare("SELECT code FROM promo_codes WHERE id = ?");
+        $stmt->execute([$res_promo]);
+        $promo_str = $stmt->fetchColumn();
+    }
+    
+    $stmt = $pdo->prepare("SELECT item_id, quantity FROM reservation_items WHERE reservation_id = ?");
+    $stmt->execute([$id]);
+    $curr_items_db = $stmt->fetchAll();
+    
+    $recalc_items = [];
+    foreach ($curr_items_db as $item) {
+        $recalc_items[$item['item_id']] = $item['quantity'];
+    }
+    
+    $is_weekend = (date('N', strtotime($date)) >= 6);
+    
+    $params = [
+        'duration_days' => $duration_days,
+        'distance_km' => $distance_km,
+        'is_weekend' => $is_weekend,
+        'promo_code' => $promo_str
+    ];
+    
+    $pricing = calculateTotalPrice($recalc_items, $params);
+    
+    $stmt = $pdo->prepare("UPDATE reservations SET customer_name = ?, customer_phone = ?, event_date = ?, event_location = ?, duration_days = ?, distance_km = ?, total_price = ?, discount_amount = ? WHERE id = ?");
+    $stmt->execute([$name, $phone, $date, $location, $duration_days, $distance_km, $pricing['total'], $pricing['discount'], $id]);
     
     header("Location: manage.php?id=" . $id . "&success=1");
     exit;
@@ -72,6 +169,13 @@ $items = $stmt->fetchAll();
 $stmt = $pdo->prepare("SELECT * FROM payments WHERE reservation_id = ? ORDER BY created_at DESC");
 $stmt->execute([$id]);
 $payments = $stmt->fetchAll();
+
+// Get all active items grouped
+$stmt = $pdo->query("SELECT c.name as cat_name, i.* FROM items i JOIN categories c ON i.category_id = c.id WHERE i.status = 'available'");
+$all_items_catalog = [];
+while ($row = $stmt->fetch()) {
+    $all_items_catalog[$row['cat_name']][] = $row;
+}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -126,20 +230,20 @@ $payments = $stmt->fetchAll();
                     </div>
                 <?php endif; ?>
 
-                <div id="viewInfo" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+                <div id="viewInfo" style="display: <?php echo isset($_GET['edit']) ? 'none' : 'grid'; ?>; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
                     <div>
                         <p style="color: #666; font-size: 0.85rem;">Client</p>
                         <p><strong><?php echo htmlspecialchars($res['customer_name']); ?></strong></p>
                         <p><?php echo htmlspecialchars($res['customer_phone']); ?></p>
                     </div>
                     <div>
-                        <p style="color: #666; font-size: 0.85rem;">Date & Lieu</p>
-                        <p><strong><?php echo date('d/m/Y', strtotime($res['event_date'])); ?></strong></p>
-                        <p><?php echo htmlspecialchars($res['event_location']); ?></p>
+                        <p style="color: #666; font-size: 0.85rem;">Date, Durée & Lieu</p>
+                        <p><strong><?php echo date('d/m/Y', strtotime($res['event_date'])); ?></strong> (<?php echo $res['duration_days']; ?>j)</p>
+                        <p><?php echo htmlspecialchars($res['event_location']); ?> <?php if($res['distance_km']) echo '- '.$res['distance_km'].' km'; ?></p>
                     </div>
                 </div>
 
-                <form id="editInfoForm" method="POST" style="display:none; margin-top: 20px;">
+                <form id="editInfoForm" method="POST" style="display: <?php echo isset($_GET['edit']) ? 'block' : 'none'; ?>; margin-top: 20px;">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                         <div class="form-group">
                             <label style="font-size: 0.85rem; font-weight: 600;">Nom du Client</label>
@@ -154,8 +258,16 @@ $payments = $stmt->fetchAll();
                             <input type="date" name="event_date" class="form-control" value="<?php echo htmlspecialchars($res['event_date']); ?>" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
                         </div>
                         <div class="form-group">
+                            <label style="font-size: 0.85rem; font-weight: 600;">Durée (Jours)</label>
+                            <input type="number" name="duration_days" class="form-control" value="<?php echo $res['duration_days']; ?>" required min="1" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                        </div>
+                        <div class="form-group">
                             <label style="font-size: 0.85rem; font-weight: 600;">Lieu</label>
                             <input type="text" name="event_location" class="form-control" value="<?php echo htmlspecialchars($res['event_location']); ?>" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size: 0.85rem; font-weight: 600;">Distance (KM)</label>
+                            <input type="number" name="distance_km" class="form-control" value="<?php echo $res['distance_km']; ?>" min="0" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
                         </div>
                     </div>
                     <div style="margin-top: 20px; display: flex; gap: 10px;">
@@ -166,42 +278,104 @@ $payments = $stmt->fetchAll();
             </div>
 
             <div class="card">
-                <h3>Articles</h3>
-                <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-                    <tr style="text-align: left; color: #666; font-size: 0.85rem; border-bottom: 1px solid #eee;">
-                        <th style="padding: 10px;">Item</th>
-                        <th style="padding: 10px;">Qté</th>
-                        <th style="padding: 10px;">Prix U</th>
-                        <th style="padding: 10px;">Total</th>
-                    </tr>
-                    <?php foreach ($items as $it): ?>
-                    <tr style="border-bottom: 1px solid #fafafa;">
-                        <td style="padding: 10px; display: flex; align-items: center; gap: 10px;">
-                            <?php if (!empty($it['image_url'])): ?>
-                                <img src="../<?php echo htmlspecialchars($it['image_url']); ?>" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px;">
-                            <?php else: ?>
-                                <div style="width: 40px; height: 40px; background: #eee; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 0.8rem;">
-                                    <i class="fas fa-image"></i>
-                                </div>
-                            <?php endif; ?>
-                            <span><?php echo htmlspecialchars($it['item_name']); ?></span>
-                        </td>
-                        <td style="padding: 10px;"><?php echo $it['quantity']; ?></td>
-                        <td style="padding: 10px;"><?php echo number_format($it['price_at_time'], 0); ?> F</td>
-                        <td style="padding: 10px;"><strong><?php echo number_format($it['price_at_time'] * $it['quantity'], 0); ?> F</strong></td>
-                    </tr>
-                    <?php endforeach; ?>
-                </table>
-                
-                <?php if ($res['discount_amount'] > 0): ?>
-                <div style="text-align: right; margin-top: 15px; font-size: 1rem; color: #15803d; font-weight: 700;">
-                    Remise Promo <?php echo $res['promo_code_name'] ? '(<i class="fas fa-tag"></i> ' . htmlspecialchars($res['promo_code_name']) . ')' : ''; ?> : - <?php echo number_format($res['discount_amount'], 0); ?> FCFA
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3 style="margin: 0;">Articles</h3>
+                    <button type="button" id="openEditItemsBtn" onclick="document.getElementById('editItemsForm').style.display='block'; document.getElementById('viewItems').style.display='none'; updateLiveEditSummary();" class="contact-btn" style="padding: 5px 15px; font-size: 0.85rem; background: #6366f1; border: none; cursor: pointer;"><i class="fas fa-edit"></i> Modifier Articles</button>
                 </div>
+
+                <?php if (isset($_GET['success_items'])): ?>
+                    <div style="background: #dcfce7; color: #166534; padding: 10px; border-radius: 8px; margin-top: 15px; font-size: 0.9rem; font-weight: 600;">
+                        Articles mis à jour avec succès ✅
+                    </div>
                 <?php endif; ?>
-                
-                <div style="text-align: right; margin-top: 10px; font-size: 1.2rem; color: var(--secondary-orange); font-weight: 800;">
-                    TOTAL : <?php echo number_format($res['total_price'], 0); ?> FCFA
+
+                <div id="viewItems">
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                        <tr style="text-align: left; color: #666; font-size: 0.85rem; border-bottom: 1px solid #eee;">
+                            <th style="padding: 10px;">Item</th>
+                            <th style="padding: 10px;">Qté</th>
+                            <th style="padding: 10px;">Prix U</th>
+                            <th style="padding: 10px;">Total</th>
+                        </tr>
+                        <?php foreach ($items as $it): ?>
+                        <tr style="border-bottom: 1px solid #fafafa;">
+                            <td style="padding: 10px; display: flex; align-items: center; gap: 10px;">
+                                <?php if (!empty($it['image_url'])): ?>
+                                    <img src="../<?php echo htmlspecialchars($it['image_url']); ?>" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px;">
+                                <?php else: ?>
+                                    <div style="width: 40px; height: 40px; background: #eee; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 0.8rem;">
+                                        <i class="fas fa-image"></i>
+                                    </div>
+                                <?php endif; ?>
+                                <span><?php echo htmlspecialchars($it['item_name']); ?></span>
+                            </td>
+                            <td style="padding: 10px;"><?php echo $it['quantity']; ?></td>
+                            <td style="padding: 10px;"><?php echo number_format($it['price_at_time'], 0); ?> F</td>
+                            <td style="padding: 10px;"><strong><?php echo number_format($it['price_at_time'] * $it['quantity'], 0); ?> F</strong></td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </table>
+                    
+                    <?php if ($res['discount_amount'] > 0): ?>
+                    <div style="text-align: right; margin-top: 15px; font-size: 1rem; color: #15803d; font-weight: 700;">
+                        Remise Promo <?php echo $res['promo_code_name'] ? '(<i class="fas fa-tag"></i> ' . htmlspecialchars($res['promo_code_name']) . ')' : ''; ?> : - <?php echo number_format($res['discount_amount'], 0); ?> FCFA
+                    </div>
+                    <?php endif; ?>
+                    
+                    <div style="text-align: right; margin-top: 10px; font-size: 1.2rem; color: var(--secondary-orange); font-weight: 800;">
+                        TOTAL : <?php echo number_format($res['total_price'], 0); ?> FCFA
+                    </div>
                 </div>
+
+                <!-- Formulaire Modif Articles -->
+                <form id="editItemsForm" method="POST" style="display:none; margin-top: 20px;">
+                    <?php 
+                    $curr_qtys = [];
+                    foreach ($items as $it) {
+                        $curr_qtys[$it['item_id']] = $it['quantity'];
+                    }
+                    ?>
+                    <div style="max-height: 400px; overflow-y: auto; padding-right: 15px;">
+                        <?php foreach ($all_items_catalog as $cat => $cat_items): ?>
+                            <div class="category-title" style="margin-top: 15px; font-size: 0.9rem; color: #666; border-bottom: 2px solid #eee; padding-bottom: 5px;"><strong><?php echo htmlspecialchars($cat); ?></strong></div>
+                            <?php foreach ($cat_items as $it): 
+                                $q = $curr_qtys[$it['id']] ?? 0;
+                            ?>
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f9f9f9;">
+                                    <div style="display: flex; align-items: center; gap: 15px;">
+                                        <?php if (!empty($it['image_url'])): ?>
+                                            <img src="../<?php echo htmlspecialchars($it['image_url']); ?>" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px;">
+                                        <?php else: ?>
+                                            <div style="width: 40px; height: 40px; background: #eee; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #999;">
+                                                <i class="fas fa-image"></i>
+                                            </div>
+                                        <?php endif; ?>
+                                        <div>
+                                            <strong style="color: var(--dark-blue); font-size: 0.9rem;"><?php echo htmlspecialchars($it['name']); ?></strong><br>
+                                            <small style="color: #666;"><?php echo number_format($it['price_per_day'], 0); ?> F</small>
+                                        </div>
+                                    </div>
+                                    <input type="number" name="items[<?php echo $it['id']; ?>]" class="item-qty-edit" value="<?php echo $q; ?>" min="0" 
+                                           data-id="<?php echo $it['id']; ?>" data-price="<?php echo $it['price_per_day']; ?>" data-name="<?php echo htmlspecialchars($it['name']); ?>"
+                                           style="width: 60px; text-align: center; padding: 5px; border-radius: 5px; border: 1px solid #ccc;">
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endforeach; ?>
+                    </div>
+                    
+                    <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-top: 20px; border: 1px solid #e2e8f0;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: #64748b; font-size: 0.9rem;">
+                            <span>Nouveau Total Estimé :</span>
+                            <span id="newTotalPreview" style="font-weight: 800; color: var(--secondary-orange); font-size: 1.2rem;">CALCUL...</span>
+                        </div>
+                        <p style="font-size: 0.75rem; color: #94a3b8; margin: 0;"><i class="fas fa-info-circle"></i> Le prix tient compte de la durée (<?php echo $res['duration_days']; ?>j), la distance et du code promo utilisé.</p>
+                    </div>
+
+                    <div style="margin-top: 20px; display: flex; gap: 10px;">
+                        <button type="submit" name="update_items" class="contact-btn" style="border:none; padding: 12px 15px; cursor: pointer; flex: 1;">Enregistrer Articles</button>
+                        <button type="button" onclick="document.getElementById('editItemsForm').style.display='none'; document.getElementById('viewItems').style.display='block';" style="padding: 12px 15px; background: #e5e7eb; border: none; border-radius: 8px; cursor: pointer; color: #374151;">Annuler</button>
+                    </div>
+                </form>
             </div>
 
             <div class="card">
@@ -287,6 +461,49 @@ $payments = $stmt->fetchAll();
 </div>
 
 <script src="../assets/js/admin.js"></script>
+
+<script>
+    const resData = {
+        duration: <?php echo $res['duration_days']; ?>,
+        distance: <?php echo $res['distance_km']; ?>,
+        is_weekend: <?php echo (date('N', strtotime($res['event_date'])) >= 6) ? 'true' : 'false'; ?>,
+        promo: "<?php echo htmlspecialchars($res['promo_code_name'] ?? ''); ?>"
+    };
+
+    async function updateLiveEditSummary() {
+        const items = {};
+        document.querySelectorAll('.item-qty-edit').forEach(i => {
+            if (i.value > 0) items[i.dataset.id] = i.value;
+        });
+
+        const data = {
+            items: items,
+            duration: resData.duration,
+            distance: resData.distance,
+            is_weekend: resData.is_weekend === true || resData.is_weekend === 'true',
+            promo: resData.promo
+        };
+
+        try {
+            const response = await fetch('../api/calculate_price.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            document.getElementById('newTotalPreview').innerText = (result.total || 0).toLocaleString() + ' FCFA';
+        } catch(e) {
+            console.error('Erreur API:', e);
+            document.getElementById('newTotalPreview').innerText = 'Erreur';
+        }
+    }
+
+    document.querySelectorAll('.item-qty-edit').forEach(i => {
+        i.addEventListener('input', updateLiveEditSummary);
+        i.addEventListener('change', updateLiveEditSummary);
+    });
+</script>
+
 </body>
 </html>
 
