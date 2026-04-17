@@ -1,4 +1,4 @@
-ï»¿<?php
+<?php
 // admin/items.php
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
@@ -47,7 +47,7 @@ if (isset($_POST['save_item'])) {
         $stmt = $pdo->prepare("INSERT INTO items (name, category_id, price_per_day, quantity_total, status, image_url) VALUES (?, ?, ?, ?, ?, ?)");
         $stmt->execute([$name, $cat_id, $price, $qty, $status, $image_url]);
     }
-    $msg = "Produit enregistrÃ© avec succÃ¨s !";
+    $msg = "Produit enregistré avec succès !";
 }
 
 // Delete
@@ -101,7 +101,7 @@ $categories = $pdo->query("SELECT * FROM categories")->fetchAll();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stock & Produits - Sam Admin</title>
     <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/admin.css">
+    <link rel="stylesheet" href="../assets/css/admin.css?v=2">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body style="background: #f4f5f7;">
@@ -116,14 +116,14 @@ $categories = $pdo->query("SELECT * FROM categories")->fetchAll();
         <h2>Sam Management</h2>
         <a href="dashboard.php"><i class="fas fa-th-large"></i> &nbsp; Dashboard</a>
         <a href="items.php" class="active"><i class="fas fa-box"></i> &nbsp; Stock & Produits</a>
-        <a href="reservations.php"><i class="fas fa-calendar-check"></i> &nbsp; RÃ©servations</a>
+        <a href="reservations.php"><i class="fas fa-calendar-check"></i> &nbsp; Réservations</a>
         <a href="payments.php"><i class="fas fa-money-bill-wave"></i> &nbsp; Paiements</a>
         <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse</a>
         <?php if (hasRole('super_admin')): ?>
             <a href="users.php"><i class="fas fa-users-cog"></i> &nbsp; Utilisateurs</a>
-            <a href="settings.php"><i class="fas fa-tools"></i> &nbsp; ParamÃ¨tres</a>
+            <a href="settings.php"><i class="fas fa-tools"></i> &nbsp; Paramètres</a>
         <?php endif; ?>
-        <a href="../logout.php" style="margin-top: 50px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> &nbsp; DÃ©connexion</a>
+        <a href="../logout.php" style="margin-top: 50px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> &nbsp; Déconnexion</a>
     </div>
 
     <div class="main-content">
@@ -140,7 +140,7 @@ $categories = $pdo->query("SELECT * FROM categories")->fetchAll();
                 <input type="text" name="search" value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>" placeholder="Nom du produit..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
             </div>
             <div class="form-group" style="width: 180px;">
-                <label style="font-size: 0.85rem; font-weight: 700; color: #666;">CatÃ©gorie</label>
+                <label style="font-size: 0.85rem; font-weight: 700; color: #666;">Catégorie</label>
                 <select name="category" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
                     <option value="">Toutes</option>
                     <?php foreach ($categories as $cat): ?>
@@ -177,8 +177,8 @@ $categories = $pdo->query("SELECT * FROM categories")->fetchAll();
                 <thead>
                     <tr style="text-align: left; border-bottom: 2px solid #eee;">
                         <th style="padding: 15px;">Image</th>
-                        <th style="padding: 15px;">CatÃ©gorie</th>
-                        <th style="padding: 15px;">DÃ©signation</th>
+                        <th style="padding: 15px;">Catégorie</th>
+                        <th style="padding: 15px;">Désignation</th>
                         <th style="padding: 15px;">Prix/Jour</th>
                         <th style="padding: 15px;">Stock Total</th>
                         <th style="padding: 15px;">Statut</th>
@@ -214,7 +214,7 @@ $categories = $pdo->query("SELECT * FROM categories")->fetchAll();
         <?php if (isset($total_pages) && $total_pages > 1): ?>
         <div style="margin-top: 20px; display: flex; justify-content: center; gap: 5px; flex-wrap: wrap; padding-bottom: 20px;">
             <?php if ($page > 1): ?>
-                <a href="<?php echo htmlspecialchars($base_url . 'page=' . ($page - 1)); ?>" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; text-decoration: none; color: #333; background: white;"><i class="fas fa-chevron-left"></i> PrÃ©cÃ©dent</a>
+                <a href="<?php echo htmlspecialchars($base_url . 'page=' . ($page - 1)); ?>" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; text-decoration: none; color: #333; background: white;"><i class="fas fa-chevron-left"></i> Précédent</a>
             <?php endif; ?>
             <?php for ($i = max(1, $page - 2); $i <= min($total_pages, $page + 2); $i++): ?>
                 <a href="<?php echo htmlspecialchars($base_url . 'page=' . $i); ?>" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; text-decoration: none; <?php echo $i === $page ? 'background: #03117a; color: white; border-color: #03117a;' : 'background: white; color: #333;'; ?>"><?php echo $i; ?></a>
@@ -248,7 +248,7 @@ $categories = $pdo->query("SELECT * FROM categories")->fetchAll();
                 <input type="text" name="name" id="item_name" required class="form-control" style="width:100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 15px;">
             </div>
             <div class="form-group">
-                <label>CatÃ©gorie</label>
+                <label>Catégorie</label>
                 <select name="category_id" id="item_cat" required class="form-control" style="width:100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 15px;">
                     <?php foreach ($categories as $cat): ?>
                         <option value="<?php echo $cat['id']; ?>"><?php echo htmlspecialchars($cat['name']); ?></option>

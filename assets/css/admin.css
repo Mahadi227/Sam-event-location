@@ -6,17 +6,32 @@
 
 .admin-sidebar {
     width: 260px;
-    background: rgba(3, 17, 122, 0.726);
-    height: 100vh;
+    background: rgb(2, 54, 103);
+    top: 0;
+    bottom: 0;
     position: fixed;
     color: #8a8b9f;
     padding: 25px;
     z-index: 1001;
     transition: 0.3s;
+    overflow-y: auto;
 }
 
+/* Custom scrollbar for sidebar */
+.admin-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+.admin-sidebar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+}
+.admin-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+}
+
+
 .admin-sidebar a {
-    color: #8a8b9f;
+    color: #f9f9f9;
     text-decoration: none;
     display: flex;
     align-items: center;
@@ -50,7 +65,7 @@
 /* Mobile Top Bar */
 .admin-mobile-header {
     display: none;
-    background: #1a1c23;
+    background: rgba(239, 105, 2, 0.885);
     color: white;
     padding: 15px 20px;
     justify-content: space-between;
