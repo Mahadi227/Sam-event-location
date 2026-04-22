@@ -16,11 +16,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($password !== $confirm_password) {
         $error = "Les mots de passe ne correspondent pas.";
     } else {
-        // Vérifier si l'email, le téléphone ou le nom existe déjà
-        $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ? OR phone = ? OR name = ?");
-        $stmt->execute([$email, $phone, $name]);
+        // Vérifier si le téléphone ou l'email existe déjà
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE phone = ? OR (email != '' AND email = ?)");
+        $stmt->execute([$phone, $email]);
         if ($stmt->fetch()) {
-            $error = "Ce nom, email ou numéro de téléphone est déjà utilisé.";
+            $error = "Ce numéro de téléphone ou cet email est déjà utilisé par un autre compte.";
         } else {
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
             $stmt = $pdo->prepare("INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, 'client')");

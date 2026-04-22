@@ -5,6 +5,7 @@ require_once '../includes/auth.php';
 requireSuperAdmin();
 
 $msg = '';
+$error = '';
 
 // Add/Edit User
 if (isset($_POST['save_user'])) {
@@ -17,15 +18,15 @@ if (isset($_POST['save_user'])) {
 
     // Uniqueness validation
     if ($id) {
-        $stmt_check = $pdo->prepare("SELECT id FROM users WHERE (email = ? OR phone = ? OR name = ?) AND id != ?");
-        $stmt_check->execute([$email, $phone, $name, $id]);
+        $stmt_check = $pdo->prepare("SELECT id FROM users WHERE (phone = ? OR (email != '' AND email = ?)) AND id != ?");
+        $stmt_check->execute([$phone, $email, $id]);
     } else {
-        $stmt_check = $pdo->prepare("SELECT id FROM users WHERE (email = ? OR phone = ? OR name = ?)");
-        $stmt_check->execute([$email, $phone, $name]);
+        $stmt_check = $pdo->prepare("SELECT id FROM users WHERE (phone = ? OR (email != '' AND email = ?))");
+        $stmt_check->execute([$phone, $email]);
     }
 
     if ($stmt_check->fetch()) {
-        $msg = "Erreur: Ce nom, email ou numéro de téléphone est déjà pris par un autre compte.";
+        $error = "Erreur: Ce numéro de téléphone ou cet email est déjà pris par un autre compte.";
     } else {
         if ($id) {
             if (!empty($password)) {
@@ -47,10 +48,18 @@ if (isset($_POST['save_user'])) {
 
 // Delete
 if (isset($_GET['delete'])) {
-    $stmt = $pdo->prepare("DELETE FROM users WHERE id = ? AND id != ?");
-    $stmt->execute([$_GET['delete'], $_SESSION['user_id']]);
-    header("Location: users.php");
-    exit;
+    try {
+        $stmt = $pdo->prepare("DELETE FROM users WHERE id = ? AND id != ?");
+        $stmt->execute([$_GET['delete'], $_SESSION['user_id']]);
+        header("Location: users.php");
+        exit;
+    } catch (PDOException $e) {
+        if ($e->getCode() == 23000) {
+            $error = "Erreur : Impossible de supprimer cet utilisateur car il est lié à des réservations ou d'autres données.";
+        } else {
+            $error = "Erreur : " . $e->getMessage();
+        }
+    }
 }
 
 $where = [];
@@ -147,6 +156,11 @@ if (!empty($query_string_params)) $base_url = '?' . http_build_query($query_stri
     <?php if ($msg): ?>
         <div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
             <?php echo $msg; ?>
+        </div>
+    <?php endif; ?>
+    <?php if ($error): ?>
+        <div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+            <?php echo $error; ?>
         </div>
     <?php endif; ?>
 

@@ -86,7 +86,7 @@ $qr_url = "https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=" . urlen
         <div class="logo">Sam Event LOCATION</div>
         <div style="text-align: right;">
             <strong>Facture #<?php echo $id; ?></strong><br>
-            Date: <?php echo date('d/m/Y'); ?>
+            Date: <?php echo date('d/m/Y', strtotime($res['created_at'])); ?>
         </div>
     </div>
 
