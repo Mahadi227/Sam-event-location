@@ -158,8 +158,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <div class="form-group" style="text-align: left; margin-top: 20px;">
                     <label><i class="fas fa-lock"></i> Mot de passe</label>
-                    <input type="password" name="password" class="form-control" placeholder="••••••••" required
-                        style="padding: 12px; border-radius: 10px; border: 1px solid #ddd; width: 100%;">
+                    <div style="position: relative;">
+                        <input type="password" name="password" id="password" class="form-control" placeholder="••••••••" required
+                            style="padding: 12px; border-radius: 10px; border: 1px solid #ddd; width: 100%; padding-right: 40px;">
+                        <i class="fas fa-eye" id="togglePassword" style="position: absolute; right: 15px; top: 15px; cursor: pointer; color: #666;"></i>
+                    </div>
                 </div>
 
                 <button type="submit" class="contact-btn"
@@ -179,6 +182,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 
+    <script>
+        document.getElementById('togglePassword').addEventListener('click', function () {
+            const password = document.getElementById('password');
+            const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+            password.setAttribute('type', type);
+            this.classList.toggle('fa-eye-slash');
+        });
+    </script>
 </body>
 
 </html>

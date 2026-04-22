@@ -8,7 +8,7 @@ $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = $_POST['name'] ?? '';
-    $email = $_POST['email'] ?? '';
+    $email = !empty($_POST['email']) ? $_POST['email'] : null;
     $phone = $_POST['phone'] ?? '';
     $password = $_POST['password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
@@ -23,11 +23,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = "Ce numéro de téléphone ou cet email est déjà utilisé par un autre compte.";
         } else {
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare("INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, 'client')");
-            if ($stmt->execute([$name, $email, $phone, $hashed_password])) {
-                $success = "Compte créé avec succès ! Vous pouvez maintenant vous connecter.";
-            } else {
-                $error = "Une erreur est survenue lors de la création du compte.";
+            try {
+                $stmt = $pdo->prepare("INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, 'client')");
+                $stmt->execute([$name, $email, $phone, $hashed_password]);
+                
+                $_SESSION['user_id'] = $pdo->lastInsertId();
+                $_SESSION['name'] = $name;
+                $_SESSION['role'] = 'client';
+                header("Location: client/dashboard.php");
+                exit;
+            } catch (PDOException $e) {
+                if ($e->getCode() == 23000) {
+                    $error = "Erreur de base de données : conflit de validation (nom, email ou téléphone déjà existant).";
+                } else {
+                    $error = "Une erreur est survenue lors de la création du compte. Veuillez réessayer plus tard.";
+                }
             }
         }
     }
@@ -42,6 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Inscription - Sam Event Location</title>
     <link rel="stylesheet" href="assets/css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .register-box {
             max-width: 500px;
@@ -90,8 +101,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         style="padding: 12px; border-radius: 10px; border: 1px solid #ddd; width: 100%;">
                 </div>
                 <div class="form-group" style="text-align: left; margin-top: 15px;">
-                    <label>Email</label>
-                    <input type="email" name="email" class="form-control" placeholder="votre@email.com" required
+                    <label>Email <span style="color: #999; font-size: 0.85em;">(Optionnel)</span></label>
+                    <input type="email" name="email" class="form-control" placeholder="votre@email.com"
                         style="padding: 12px; border-radius: 10px; border: 1px solid #ddd; width: 100%;">
                 </div>
                 <div class="form-group" style="text-align: left; margin-top: 15px;">
@@ -101,13 +112,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <div class="form-group" style="text-align: left; margin-top: 15px;">
                     <label>Mot de passe</label>
-                    <input type="password" name="password" class="form-control" placeholder="••••••••" required
-                        style="padding: 12px; border-radius: 10px; border: 1px solid #ddd; width: 100%;">
+                    <div style="position: relative;">
+                        <input type="password" name="password" id="password" class="form-control" placeholder="••••••••" required
+                            style="padding: 12px; border-radius: 10px; border: 1px solid #ddd; width: 100%; padding-right: 40px;">
+                        <i class="fas fa-eye togglePassword" data-target="password" style="position: absolute; right: 15px; top: 15px; cursor: pointer; color: #666;"></i>
+                    </div>
                 </div>
                 <div class="form-group" style="text-align: left; margin-top: 15px;">
                     <label>Confirmer le mot de passe</label>
-                    <input type="password" name="confirm_password" class="form-control" placeholder="••••••••" required
-                        style="padding: 12px; border-radius: 10px; border: 1px solid #ddd; width: 100%;">
+                    <div style="position: relative;">
+                        <input type="password" name="confirm_password" id="confirm_password" class="form-control" placeholder="••••••••" required
+                            style="padding: 12px; border-radius: 10px; border: 1px solid #ddd; width: 100%; padding-right: 40px;">
+                        <i class="fas fa-eye togglePassword" data-target="confirm_password" style="position: absolute; right: 15px; top: 15px; cursor: pointer; color: #666;"></i>
+                    </div>
                 </div>
 
                 <button type="submit" class="contact-btn"
@@ -124,6 +141,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 
+    <script>
+        document.querySelectorAll('.togglePassword').forEach(icon => {
+            icon.addEventListener('click', function () {
+                const targetId = this.getAttribute('data-target');
+                const passwordInput = document.getElementById(targetId);
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                this.classList.toggle('fa-eye-slash');
+            });
+        });
+    </script>
 </body>
 
 </html>
