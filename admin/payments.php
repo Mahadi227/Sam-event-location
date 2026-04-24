@@ -33,6 +33,10 @@ if (isset($_POST['save_payment'])) {
 
 // Delete Payment
 if (isset($_GET['delete'])) {
+    if (!hasRole('super_admin')) {
+        die("Accès refusé. Seul un super administrateur peut supprimer un paiement.");
+    }
+    
     $id_to_del = $_GET['delete'];
     $resQ = $pdo->prepare("SELECT reservation_id FROM payments WHERE id = ?");
     $resQ->execute([$id_to_del]);
@@ -210,7 +214,9 @@ if (!empty($query_string_params)) $base_url = '?' . http_build_query($query_stri
                         <td style="padding: 15px; font-size: 0.85rem; color: #666;"><?php echo htmlspecialchars($p['transaction_ref']); ?></td>
                         <td style="padding: 15px;">
                             <button onclick="editPayment(<?php echo htmlspecialchars(json_encode($p)); ?>)" style="background:none; border:none; color: #4338ca; cursor: pointer; margin-right: 10px;"><i class="fas fa-edit"></i></button>
+                            <?php if (hasRole('super_admin')): ?>
                             <a href="?delete=<?php echo $p['id']; ?>" onclick="return confirm('Confirmer la suppression de ce paiement ?')" style="color: #ef4444;"><i class="fas fa-trash"></i></a>
+                            <?php endif; ?>
                         </td>
                     </tr>
                     <?php endforeach; ?>

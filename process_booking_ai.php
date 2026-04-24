@@ -32,12 +32,16 @@ try {
         // Normal logged-in client
         $target_user_id = $user_id;
     } else {
-        // Look up customer by phone or name
+        // Look up customer by phone
         $stmt_user = $pdo->prepare("SELECT id, name FROM users WHERE phone = ?");
         $stmt_user->execute([$customer_phone]);
         $existing_user = $stmt_user->fetch();
 
         if ($existing_user) {
+            // If the user already exists but the person booking is a guest, prevent hijacking
+            if (!$is_staff) {
+                throw new Exception("Ce numéro de téléphone est déjà enregistré. Veuillez vous connecter à votre compte pour réserver.");
+            }
             $target_user_id = $existing_user['id'];
         } else {
             // Create new client user
@@ -48,7 +52,7 @@ try {
         }
 
         if (!$is_staff) {
-            // Auto-login for normal visitor (not already logged in as staff)
+            // Auto-login for normal visitor (brand new guest)
             $_SESSION['user_id'] = $target_user_id;
             $_SESSION['name'] = $customer_name;
             $_SESSION['phone'] = $customer_phone;

@@ -131,8 +131,17 @@ $prev_year = date('Y', strtotime("-1 month", strtotime($first_day)));
             // Days of month
             for ($day = 1; $day <= $days_in_month; $day++) {
                 $date_str = sprintf("%04d-%02d-%02d", $year, $month, $day);
-                $is_today = ($date_str == date('Y-m-d')) ? 'border: 2px solid var(--accent-gold);' : '';
-                echo '<div class="calendar-day" style="' . $is_today . '">';
+                
+                $style = '';
+                if ($date_str == date('Y-m-d')) {
+                    $style = 'border: 3px solid var(--accent-gold); background: #fffbf0; transform: scale(1.02); z-index: 10; padding: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 8px;';
+                } elseif ($date_str < date('Y-m-d')) {
+                    $style = 'background: #f1f5f9; opacity: 0.65;';
+                } else {
+                    $style = 'background: white;';
+                }
+
+                echo '<div class="calendar-day" style="' . $style . '">';
                 echo '<div class="day-num">' . $day . '</div>';
 
                 if (isset($res_data[$date_str])) {

@@ -121,7 +121,6 @@ while ($row = $stmt->fetch()) {
             <div class="step active" id="s1">1. CHOIX MATÉRIEL</div>
             <div class="step" id="s2">2. DATE & LIEU</div>
             <div class="step" id="s3">3. RÉCAPITULATIF</div>
-            <div class="step" id="s4">4. TERMINÉ</div>
         </div>
 
         <?php if ($error): ?>
@@ -228,16 +227,6 @@ while ($row = $stmt->fetch()) {
                         <div id="errorDetails" style="margin-top: 15px;"></div>
                     </div>
 
-                    <!-- STEP 4: SUCCESS -->
-                    <div class="step-panel" id="panel4" style="text-align: center; padding: 50px 20px;">
-                        <div style="width: 80px; height: 80px; background: #d4edda; color: #155724; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 3rem; margin: 0 auto 20px;">
-                            <i class="fas fa-check"></i>
-                        </div>
-                        <h2 style="color: #155724;">Réservation Confirmée !</h2>
-                        <div id="successDetails" style="margin-top: 20px; font-size: 1.1rem; color: #555;">
-                            <!-- JS loaded -->
-                        </div>
-                    </div>
                 </div>
 
                 <div class="live-summary">
@@ -264,6 +253,35 @@ while ($row = $stmt->fetch()) {
         let currentStep = 1;
 
         function nextStep(step) {
+            // Validation: Must select at least one item to proceed to Step 2
+            if (currentStep === 1 && step === 2) {
+                let hasItems = false;
+                document.querySelectorAll('.item-qty').forEach(i => {
+                    if (parseInt(i.value) > 0) hasItems = true;
+                });
+                if (!hasItems) {
+                    alert("Veuillez sélectionner au moins un article avant de continuer.");
+                    return;
+                }
+            }
+
+            // Validation: Must fill all required fields to proceed to Step 3
+            if (currentStep === 2 && step === 3) {
+                const requiredInputs = document.querySelectorAll('#panel2 input[required]');
+                let allFilled = true;
+                
+                // We use standard HTML5 validation reporting
+                for (let input of requiredInputs) {
+                    if (!input.checkValidity()) {
+                        input.reportValidity();
+                        allFilled = false;
+                        break;
+                    }
+                }
+                
+                if (!allFilled) return;
+            }
+
             document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
             document.getElementById('panel' + step).classList.add('active');
@@ -410,12 +428,7 @@ while ($row = $stmt->fetch()) {
                 const data = await res.json();
                 
                 if (data.success) {
-                    nextStep(4);
-                    document.getElementById('successDetails').innerHTML = `
-                        <p><strong>N° Réservation:</strong> #${data.reservation_id}</p>
-                        <p>Votre demande a bien été confirmée. Notre équipe la prépare pour vous.</p>
-                        <a href="track_reservation.php" class="contact-btn" style="display: inline-block; margin-top: 20px;">Tableau de bord</a>
-                    `;
+                    window.location.href = 'confirmation.php?id=' + data.reservation_id;
                 } else {
                     document.getElementById('errorDetails').innerHTML = `
                         <div style="background: #fef2f2; border-left: 4px solid #ef4444; color: #991b1b; padding: 15px 20px; border-radius: 8px; text-align: left; box-shadow: 0 2px 10px rgba(239, 68, 68, 0.1); margin-top: 5px;">

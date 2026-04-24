@@ -42,6 +42,14 @@ for ($i = 5; $i >= 0; $i--) {
     $chart_revenue[] = $rev;
     $chart_reservations[] = $res;
 }
+
+// Top Products
+$top_items_stmt = $pdo->query("SELECT i.name, i.image_url, SUM(ri.quantity) as total_rented FROM reservation_items ri JOIN items i ON ri.item_id = i.id GROUP BY ri.item_id ORDER BY total_rented DESC LIMIT 5");
+$top_items = $top_items_stmt->fetchAll();
+
+// Recent Payments
+$recent_payments_stmt = $pdo->query("SELECT p.amount, p.payment_method, p.created_at, r.customer_name FROM payments p JOIN reservations r ON p.reservation_id = r.id ORDER BY p.created_at DESC LIMIT 5");
+$recent_payments = $recent_payments_stmt->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -133,11 +141,71 @@ for ($i = 5; $i >= 0; $i--) {
             </div>
 
             <!-- Monthly Report Chart -->
-            <div style="background: white; padding: 30px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+            <div style="background: white; padding: 30px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); margin-bottom: 30px;">
                 <h3>Rapport d'Activité</h3>
                 <p style="color: #888;">Visualisation des revenus et réservations (6 derniers mois).</p>
                 <div style="position: relative; height: 350px; width: 100%;">
                     <canvas id="activityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Bottom Dashboard Widgets -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 30px; margin-bottom: 40px;">
+                <!-- Top Products -->
+                <div style="background: white; padding: 30px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                    <h3>Top Produits Réservés</h3>
+                    <p style="color: #888; margin-bottom: 20px;">Les articles les plus demandés.</p>
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <?php foreach ($top_items as $item): ?>
+                        <div style="display: flex; align-items: center; gap: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee;">
+                            <?php if (!empty($item['image_url'])): ?>
+                                <img src="../<?php echo htmlspecialchars($item['image_url']); ?>" style="width: 50px; height: 50px; border-radius: 10px; object-fit: cover;">
+                            <?php else: ?>
+                                <div style="width: 50px; height: 50px; background: #f0f0f0; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #aaa;"><i class="fas fa-box"></i></div>
+                            <?php endif; ?>
+                            <div style="flex: 1;">
+                                <strong style="color: var(--dark-blue); display: block;"><?php echo htmlspecialchars($item['name']); ?></strong>
+                            </div>
+                            <div style="font-weight: 800; color: var(--accent-gold);">
+                                <?php echo $item['total_rented']; ?>x
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                        <?php if (empty($top_items)): ?>
+                            <p style="color: #999;">Aucune donnée disponible.</p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Recent Payments -->
+                <div style="background: white; padding: 30px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                    <h3>Transactions Récentes</h3>
+                    <p style="color: #888; margin-bottom: 20px;">Les 5 derniers paiements reçus.</p>
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <?php foreach ($recent_payments as $pay): ?>
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 15px; border-bottom: 1px solid #eee;">
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <div style="width: 45px; height: 45px; background: #e0f2fe; color: #0369a1; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                                    <?php 
+                                        if ($pay['payment_method'] === 'cash') echo '<i class="fas fa-money-bill-wave"></i>';
+                                        elseif ($pay['payment_method'] === 'card') echo '<i class="fas fa-credit-card"></i>';
+                                        else echo '<i class="fas fa-mobile-alt"></i>';
+                                    ?>
+                                </div>
+                                <div>
+                                    <strong style="color: var(--dark-blue); display: block;"><?php echo htmlspecialchars($pay['customer_name']); ?></strong>
+                                    <small style="color: #888;"><?php echo date('d/m/Y H:i', strtotime($pay['created_at'])); ?> • <?php echo strtoupper($pay['payment_method']); ?></small>
+                                </div>
+                            </div>
+                            <div style="font-weight: 800; color: #15803d;">
+                                +<?php echo number_format($pay['amount'], 0); ?> F
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                        <?php if (empty($recent_payments)): ?>
+                            <p style="color: #999;">Aucun paiement récent.</p>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
         </div>
