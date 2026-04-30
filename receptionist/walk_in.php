@@ -5,7 +5,8 @@ require_once '../includes/auth.php';
 requireStaff();
 
 // Get items
-$stmt = $pdo->query("SELECT c.name as cat_name, i.* FROM items i JOIN categories c ON i.category_id = c.id WHERE i.status = 'available'");
+$branchFilter = getBranchSqlFilter('i');
+$stmt = $pdo->query("SELECT c.name as cat_name, i.* FROM items i JOIN categories c ON i.category_id = c.id WHERE i.status = 'available' $branchFilter");
 $items = [];
 while ($row = $stmt->fetch()) {
     $items[$row['cat_name']][] = $row;
@@ -18,7 +19,7 @@ while ($row = $stmt->fetch()) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Walk-in Reservation - Sam Event</title>
     <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/admin.css?v=2">
+    <link rel="stylesheet" href="../assets/css/admin.css?v=7">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body style="background: #f4f5f7;">
@@ -45,6 +46,7 @@ while ($row = $stmt->fetch()) {
         <h2>Nouvelle Réservation (Sur place)</h2>
 
     <form id="walkinForm" action="../process_booking_ai.php" method="POST">
+        <input type="hidden" name="branch_id" value="<?php echo getActiveBranch(); ?>">
         <div class="walkin-grid" style="margin-top: 20px;">
             <div class="main-form">
                 <div class="card">
@@ -144,7 +146,7 @@ while ($row = $stmt->fetch()) {
 </div>
 </div>
 
-<script src="../assets/js/admin.js"></script>
+<script src="../assets/js/admin.js?v=7"></script>
 <script>
     function isWeekend(dateStr) {
         if (!dateStr) return false;

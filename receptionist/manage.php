@@ -3,6 +3,7 @@
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
 require_once '../includes/engine.php';
+require_once '../includes/notifications.php';
 requireStaff();
 
 $id = $_GET['id'] ?? null;
@@ -13,6 +14,24 @@ if (isset($_POST['update_status'])) {
     $new_status = $_POST['status'];
     $stmt = $pdo->prepare("UPDATE reservations SET status = ? WHERE id = ?");
     $stmt->execute([$new_status, $id]);
+    
+    // Fetch user info for notification
+    $stmt = $pdo->prepare("SELECT user_id, customer_name FROM reservations WHERE id = ?");
+    $stmt->execute([$id]);
+    $res_info = $stmt->fetch();
+    
+    if ($res_info && $res_info['user_id']) {
+        $msg_map = [
+            'approved' => "Votre réservation a été approuvée ! 🎉",
+            'rejected' => "Votre réservation a été rejetée. Veuillez nous contacter.",
+            'in_preparation' => "Votre matériel est en cours de préparation.",
+            'completed' => "L'événement est terminé. Merci de votre confiance !",
+            'cancelled' => "Votre réservation a été annulée."
+        ];
+        if (isset($msg_map[$new_status])) {
+            createNotification($res_info['user_id'], "Mise à jour du statut", $msg_map[$new_status], "alert", $id);
+        }
+    }
 }
 
 // Process items update
@@ -144,6 +163,20 @@ if (isset($_POST['record_payment'])) {
         $stmt->execute([$amount, $id]);
         
         $pdo->commit();
+        
+        // Notification pour le Client
+        $stmt = $pdo->prepare("SELECT user_id, customer_name FROM reservations WHERE id = ?");
+        $stmt->execute([$id]);
+        $resInfo = $stmt->fetch();
+        if ($resInfo && $resInfo['user_id']) {
+            createNotification($resInfo['user_id'], "Paiement Reçu", "Nous avons bien reçu votre paiement de " . number_format($amount, 0) . " F.", "payment", $id);
+        }
+        
+        // Notification pour le Staff
+        $staff_name = $_SESSION['name'] ?? 'Reception';
+        $processor_id = $_SESSION['user_id'] ?? null;
+        notifyPaymentProcessed("Paiement Encaissé", "Paiement de " . number_format($amount, 0) . " F par $staff_name (Ref Réservation: #$id - " . ($resInfo['customer_name'] ?? 'Client') . ").", $id, $processor_id);
+        
     } catch (Exception $e) {
         $pdo->rollBack();
         die("Erreur paiement : " . $e->getMessage());
@@ -151,14 +184,19 @@ if (isset($_POST['record_payment'])) {
 }
 
 // Get reservation info
+$branchFilter = getBranchSqlFilter('r');
 $stmt = $pdo->prepare("
     SELECT r.*, pc.code as promo_code_name 
     FROM reservations r 
     LEFT JOIN promo_codes pc ON r.promo_code_id = pc.id 
-    WHERE r.id = ?
+    WHERE r.id = ? $branchFilter
 ");
 $stmt->execute([$id]);
 $res = $stmt->fetch();
+
+if (!$res) {
+    die("Réservation introuvable ou accès refusé.");
+}
 
 // Get items
 $stmt = $pdo->prepare("SELECT ri.*, i.name as item_name, i.image_url FROM reservation_items ri JOIN items i ON ri.item_id = i.id WHERE ri.reservation_id = ?");
@@ -171,7 +209,8 @@ $stmt->execute([$id]);
 $payments = $stmt->fetchAll();
 
 // Get all active items grouped
-$stmt = $pdo->query("SELECT c.name as cat_name, i.* FROM items i JOIN categories c ON i.category_id = c.id WHERE i.status = 'available'");
+$branchFilterItems = getBranchSqlFilter('i');
+$stmt = $pdo->query("SELECT c.name as cat_name, i.* FROM items i JOIN categories c ON i.category_id = c.id WHERE i.status = 'available' $branchFilterItems");
 $all_items_catalog = [];
 while ($row = $stmt->fetch()) {
     $all_items_catalog[$row['cat_name']][] = $row;
@@ -184,7 +223,7 @@ while ($row = $stmt->fetch()) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gérer la Réservation #<?php echo $id; ?></title>
     <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/admin.css?v=2">
+    <link rel="stylesheet" href="../assets/css/admin.css?v=7">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body style="background: #f4f5f7;">
@@ -455,7 +494,7 @@ while ($row = $stmt->fetch()) {
 </div>
 </div>
 
-<script src="../assets/js/admin.js"></script>
+<script src="../assets/js/admin.js?v=7"></script>
 
 <script>
     const resData = {

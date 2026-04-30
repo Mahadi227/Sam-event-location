@@ -4,14 +4,16 @@ require_once '../includes/db.php';
 require_once '../includes/auth.php';
 requireStaff();
 
+$branchSql = getBranchSqlFilter();
+
 // Get today's reservations
 $today = date('Y-m-d');
-$stmt = $pdo->prepare("SELECT * FROM reservations WHERE event_date = ? ORDER BY created_at DESC");
+$stmt = $pdo->prepare("SELECT * FROM reservations WHERE event_date = ? $branchSql ORDER BY created_at DESC");
 $stmt->execute([$today]);
 $today_res = $stmt->fetchAll();
 
 // Get pending count
-$pending_count = $pdo->query("SELECT COUNT(*) FROM reservations WHERE status = 'pending'")->fetchColumn();
+$pending_count = $pdo->query("SELECT COUNT(*) FROM reservations WHERE status = 'pending' $branchSql")->fetchColumn();
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -21,7 +23,7 @@ $pending_count = $pdo->query("SELECT COUNT(*) FROM reservations WHERE status = '
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reception - Sam Event</title>
     <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/admin.css?v=2">
+    <link rel="stylesheet" href="../assets/css/admin.css?v=7">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 
@@ -46,7 +48,9 @@ $pending_count = $pdo->query("SELECT COUNT(*) FROM reservations WHERE status = '
         </div>
 
         <div class="main-content">
-            <h2>Tableau de Bord Réception</h2>
+            <h2 style="margin: 0; font-size: 1.8rem; color: #1a1c23; margin-bottom: 25px;">Bonjour, <?php echo htmlspecialchars($_SESSION['name'] ?? ''); ?> 👋</h2>                    <p style="color: #666; margin: 5px 0 0;">Bienvenue sur votre espace de gestion voici le tableau de bord</p>
+
+            
 
             <div class="grid-stats">
                 <div class="stat-box">
@@ -107,7 +111,7 @@ $pending_count = $pdo->query("SELECT COUNT(*) FROM reservations WHERE status = '
         </div>
     </div>
 
-    <script src="../assets/js/admin.js"></script>
+    <script src="../assets/js/admin.js?v=7"></script>
 </body>
 
 </html>

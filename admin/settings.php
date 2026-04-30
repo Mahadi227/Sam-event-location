@@ -72,7 +72,7 @@ if (!empty($query_string_params)) $base_url = '?' . http_build_query($query_stri
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Paramètres - Sam SuperAdmin</title>
     <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/admin.css?v=2">
+    <link rel="stylesheet" href="../assets/css/admin.css?v=7">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
@@ -189,8 +189,10 @@ if (!empty($query_string_params)) $base_url = '?' . http_build_query($query_stri
         <a href="items.php"><i class="fas fa-box"></i> &nbsp; Stock & Produits</a>
         <a href="reservations.php"><i class="fas fa-calendar-check"></i> &nbsp; Réservations</a>
         <a href="payments.php"><i class="fas fa-money-bill-wave"></i> &nbsp; Paiements</a>
+            <a href="transfers.php"><i class="fas fa-truck-loading"></i> &nbsp; Transferts Stock</a>
         <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse</a>
-        <a href="users.php"><i class="fas fa-users-cog"></i> &nbsp; Utilisateurs</a>
+        <a href="branches.php"><i class="fas fa-building"></i> &nbsp; Succursales</a>
+            <a href="users.php"><i class="fas fa-users-cog"></i> &nbsp; Utilisateurs</a>
         <a href="settings.php" class="active"><i class="fas fa-tools"></i> &nbsp; Paramètres</a>
         <a href="../logout.php" style="margin-top: 50px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> &nbsp; Déconnexion</a>
     </div>
@@ -350,7 +352,7 @@ if (!empty($query_string_params)) $base_url = '?' . http_build_query($query_stri
     </div>
 </div>
 
-<script src="../assets/js/admin.js"></script>
+<script src="../assets/js/admin.js?v=7"></script>
 <script>
 function switchTab(tabId) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));

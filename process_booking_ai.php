@@ -3,6 +3,7 @@
 require_once 'includes/db.php';
 require_once 'includes/engine.php';
 require_once 'includes/mailer.php';
+require_once 'includes/notifications.php';
 session_start();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -23,13 +24,20 @@ try {
     $distance = (int)$_POST['distance'];
     $items_requested = $_POST['items'] ?? [];
     $promo_code = $_POST['promo_code'] ?? null;
+    $branch_id = $_POST['branch_id'] ?? 1;
 
     // --- AUTOMATIC ACCOUNT CREATION or CUSTOMER LOOKUP ---
     $is_staff = isset($_SESSION['role']) && in_array($_SESSION['role'], ['super_admin', 'mini_admin', 'receptionist']);
     $target_user_id = null;
 
     if (!$is_staff && $user_id) {
-        // Normal logged-in client
+        // Normal logged-in client: verify the user wasn't deleted by an admin in the background
+        $stmt_check = $pdo->prepare("SELECT id FROM users WHERE id = ?");
+        $stmt_check->execute([$user_id]);
+        if (!$stmt_check->fetch()) {
+            session_destroy();
+            throw new Exception("Votre compte a été supprimé ou est introuvable. Veuillez rafraîchir la page pour continuer en tant qu'invité.");
+        }
         $target_user_id = $user_id;
     } else {
         // Look up customer by phone
@@ -60,7 +68,13 @@ try {
         }
     }
     
-    $user_id = $target_user_id; // Set target user for the reservation
+    // Set target user for the reservation
+    $user_id = $target_user_id; 
+
+    // Final crucial safety check before inserting into reservations
+    if (!$user_id) {
+        throw new Exception("Erreur critique: Impossible de lier la réservation au client. L'ID utilisateur est nul.");
+    }
     // ---------------------------------
 
     // 1. Re-calculate total server-side for security
@@ -86,8 +100,8 @@ try {
 
     // 3. Insert Reservation
     $promo_code_id = $pricing['promo_code_id'] ?? null;
-    $stmt = $pdo->prepare("INSERT INTO reservations (user_id, customer_name, customer_phone, event_date, event_location, total_price, duration_days, distance_km, discount_amount, promo_code_id, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')");
-    $stmt->execute([$user_id, $customer_name, $customer_phone, $event_date, $event_location, $pricing['total'], $duration, $distance, $pricing['discount'], $promo_code_id]);
+    $stmt = $pdo->prepare("INSERT INTO reservations (user_id, branch_id, customer_name, customer_phone, event_date, event_location, total_price, duration_days, distance_km, discount_amount, promo_code_id, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')");
+    $stmt->execute([$user_id, $branch_id, $customer_name, $customer_phone, $event_date, $event_location, $pricing['total'], $duration, $distance, $pricing['discount'], $promo_code_id]);
     $reservation_id = $pdo->lastInsertId();
 
     if ($promo_code_id) {
@@ -111,6 +125,25 @@ try {
     }
 
     $pdo->commit();
+
+    // Trigger Notifications
+    notifyBranch(
+        $branch_id,
+        "Nouvelle Réservation en ligne",
+        "Une nouvelle réservation (Ref: #$reservation_id) a été effectuée par $customer_name.",
+        "booking",
+        $reservation_id
+    );
+
+    if ($user_id) {
+        createNotification(
+            $user_id,
+            "Réservation confirmée",
+            "Votre réservation pour le $event_date a été reçue et est en attente de validation.",
+            "booking",
+            $reservation_id
+        );
+    }
 
     // Notify Socket Server (Real-time update)
     $ch = curl_init('http://localhost:3000/notify');

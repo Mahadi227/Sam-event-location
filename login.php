@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['name'] = $user['name'];
         $_SESSION['role'] = $user['role'];
+        $_SESSION['branch_id'] = $user['branch_id'];
 
         // Role-based redirection
         switch ($user['role']) {
@@ -58,6 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['name'] = $user['name'];
                 $_SESSION['role'] = $user['role'];
+                $_SESSION['branch_id'] = $user['branch_id'];
 
                 // Role-based redirection
                 switch ($user['role']) {

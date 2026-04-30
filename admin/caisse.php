@@ -2,6 +2,7 @@
 // admin/caisse.php
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
+require_once '../includes/notifications.php';
 requireAdmin();
 
 $msg = '';
@@ -28,12 +29,28 @@ if (isset($_POST['save_payment'])) {
         
         $pdo->prepare("UPDATE reservations r SET amount_paid = (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE reservation_id = r.id) WHERE id = ?")->execute([$reservation_id]);
         
+        // Notify Client & Staff
+        $resQ = $pdo->prepare("SELECT user_id, customer_name FROM reservations WHERE id = ?");
+        $resQ->execute([$reservation_id]);
+        $resInfo = $resQ->fetch();
+        if ($resInfo && $resInfo['user_id']) {
+            createNotification($resInfo['user_id'], "Paiement Enregistré", "Votre paiement de " . number_format($amount, 0) . " F a été validé. Merci.", "payment", $reservation_id);
+        }
+        
+        $staff_name = $_SESSION['name'] ?? 'Admin';
+        $processor_id = $_SESSION['user_id'] ?? null;
+        notifyPaymentProcessed("Paiement Encaissé", "Paiement de " . number_format($amount, 0) . " F par $staff_name (Ref Réservation: #$reservation_id - " . ($resInfo['customer_name'] ?? 'Client') . ").", $reservation_id, $processor_id);
+
         $msg = "Paiement enregistré avec succès !";
     }
 }
 
 // Delete Payment
 if (isset($_GET['delete'])) {
+    if (!hasRole('super_admin')) {
+        die("Accès refusé. Seul le Super Administrateur peut supprimer un paiement dans la caisse.");
+    }
+    
     $id_to_del = $_GET['delete'];
     $resQ = $pdo->prepare("SELECT reservation_id FROM payments WHERE id = ?");
     $resQ->execute([$id_to_del]);
@@ -50,8 +67,26 @@ if (isset($_GET['delete'])) {
     exit;
 }
 
+// Active branch handling for Super Admin
+if (hasRole('super_admin') && isset($_GET['branch'])) {
+    if ($_GET['branch'] === 'all') {
+        unset($_SESSION['active_branch']);
+    } else {
+        $_SESSION['active_branch'] = (int)$_GET['branch'];
+    }
+}
+$active_branch = hasRole('super_admin') ? ($_SESSION['active_branch'] ?? null) : $_SESSION['branch_id'];
+$branchSql = getBranchSqlFilter('r');
+$userBranchFilter = getBranchSqlFilter('u');
+
+// Fetch branches for filter
+$branches = [];
+if (hasRole('super_admin')) {
+    $branches = $pdo->query("SELECT * FROM branches ORDER BY name")->fetchAll();
+}
+
 // Get Reservations for Dropdown
-$reservations = $pdo->query("SELECT id, customer_name, total_price, amount_paid FROM reservations ORDER BY id DESC")->fetchAll();
+$reservations = $pdo->query("SELECT r.id, r.customer_name, r.total_price, r.amount_paid FROM reservations r WHERE 1=1 $branchSql ORDER BY id DESC")->fetchAll();
 
 // Date parsing for the report
 $date = $_GET['date'] ?? date('Y-m-d');
@@ -60,7 +95,7 @@ $period = $_GET['period'] ?? 'day';
 
 // Fetch users for dropdown
 $all_staff = [];
-$stmt = $pdo->query("SELECT id, name, role FROM users WHERE role IN ('super_admin', 'mini_admin', 'receptionist')");
+$stmt = $pdo->query("SELECT u.id, u.name, u.role FROM users u WHERE u.role IN ('super_admin', 'mini_admin', 'receptionist') $userBranchFilter");
 $all_staff = $stmt->fetchAll();
 
 // Construct Date Filter SQL and Parameters
@@ -110,19 +145,20 @@ $queryParams = array_merge($dateParams, $userParams);
 $stmt = $pdo->prepare("
     SELECT p.payment_method, SUM(p.amount) as total 
     FROM payments p
-    WHERE $dateFilterSql $userFilterSql
+    JOIN reservations r ON p.reservation_id = r.id
+    WHERE $dateFilterSql $userFilterSql $branchSql
     GROUP BY p.payment_method
 ");
 $stmt->execute($queryParams);
 $methods_today = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
 // 2. Total global (Période choisie)
-$stmt = $pdo->prepare("SELECT SUM(p.amount) FROM payments p WHERE $dateFilterSql $userFilterSql");
+$stmt = $pdo->prepare("SELECT SUM(p.amount) FROM payments p JOIN reservations r ON p.reservation_id = r.id WHERE $dateFilterSql $userFilterSql $branchSql");
 $stmt->execute($queryParams);
 $total_today = $stmt->fetchColumn() ?: 0;
 
 // Total mois en cours (pour référence)
-$stmt = $pdo->prepare("SELECT SUM(p.amount) FROM payments p WHERE MONTH(p.created_at) = MONTH(?) AND YEAR(p.created_at) = YEAR(?)$userFilterSql");
+$stmt = $pdo->prepare("SELECT SUM(p.amount) FROM payments p JOIN reservations r ON p.reservation_id = r.id WHERE MONTH(p.created_at) = MONTH(?) AND YEAR(p.created_at) = YEAR(?)$userFilterSql $branchSql");
 $stmt->execute(array_merge([$date, $date], $userParams));
 $total_month = $stmt->fetchColumn() ?: 0;
 
@@ -137,7 +173,7 @@ $countStmt = $pdo->prepare("
     FROM payments p
     JOIN reservations r ON p.reservation_id = r.id
     LEFT JOIN users u ON p.processed_by = u.id
-    WHERE $dateFilterSql $userFilterSql
+    WHERE $dateFilterSql $userFilterSql $branchSql
 ");
 $countStmt->execute($queryParams);
 $total_records = $countStmt->fetchColumn();
@@ -148,7 +184,7 @@ $stmt = $pdo->prepare("
     FROM payments p
     JOIN reservations r ON p.reservation_id = r.id
     LEFT JOIN users u ON p.processed_by = u.id
-    WHERE $dateFilterSql $userFilterSql
+    WHERE $dateFilterSql $userFilterSql $branchSql
     ORDER BY p.created_at DESC
     LIMIT $limit OFFSET $offset
 ");
@@ -167,7 +203,7 @@ if (!empty($query_string_params)) $base_url = '?' . http_build_query($query_stri
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Caisse Globale - Sam Admin</title>
     <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/admin.css?v=2">
+    <link rel="stylesheet" href="../assets/css/admin.css?v=7">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .method-card {
@@ -198,9 +234,15 @@ if (!empty($query_string_params)) $base_url = '?' . http_build_query($query_stri
         <a href="items.php"><i class="fas fa-box"></i> &nbsp; Stock & Produits</a>
         <a href="reservations.php"><i class="fas fa-calendar-check"></i> &nbsp; Réservations</a>
         <a href="payments.php"><i class="fas fa-money-bill-wave"></i> &nbsp; Paiements</a>
+            <a href="transfers.php"><i class="fas fa-truck-loading"></i> &nbsp; Transferts Stock</a>
         <a href="caisse.php" class="active"><i class="fas fa-cash-register"></i> &nbsp; Caisse</a>
         <?php if (hasRole('super_admin')): ?>
-            <a href="users.php"><i class="fas fa-users-cog"></i> &nbsp; Utilisateurs</a>
+            <a href="branches.php"><i class="fas fa-building"></i> &nbsp; Succursales</a>
+        <?php endif; ?>
+        <?php if (hasRole('super_admin') || hasRole('mini_admin')): ?>
+            <a href="users.php"><i class="fas fa-users-cog"></i> &nbsp; <?php echo hasRole('super_admin') ? 'Utilisateurs' : 'Personnel'; ?></a>
+        <?php endif; ?>
+        <?php if (hasRole('super_admin')): ?>
             <a href="settings.php"><i class="fas fa-tools"></i> &nbsp; Paramètres</a>
         <?php endif; ?>
         <a href="../logout.php" style="margin-top: 50px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> &nbsp; Déconnexion</a>
@@ -222,10 +264,24 @@ if (!empty($query_string_params)) $base_url = '?' . http_build_query($query_stri
             <?php endif; ?>
 
             <form method="GET" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); width: 100%;">
+                <?php if (hasRole('super_admin')): ?>
+                <div style="border-right: 1px solid #eee; padding-right: 15px;">
+                    <span style="font-size: 0.8rem; color: #999; display: block; margin-bottom: 5px;">Succursale</span>
+                    <select name="branch" onchange="this.form.submit()" style="padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-weight: 600;">
+                        <option value="all">Toutes les succursales</option>
+                        <?php foreach ($branches as $b): ?>
+                            <option value="<?php echo $b['id']; ?>" <?php echo $active_branch == $b['id'] ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($b['name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <?php endif; ?>
+
                 <div style="border-right: 1px solid #eee; padding-right: 15px;">
                     <span style="font-size: 0.8rem; color: #999; display: block; margin-bottom: 5px;">Filtrer par Personnel</span>
                     <select name="user_id" style="padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-weight: 600;">
-                        <option value="all" <?php echo $filter_user === 'all' ? 'selected' : ''; ?>>Tous (Vue Globale)</option>
+                        <option value="all" <?php echo $filter_user === 'all' ? 'selected' : ''; ?>>Tous</option>
                         <?php foreach ($all_staff as $staff): ?>
                             <option value="<?php echo $staff['id']; ?>" <?php echo $filter_user == $staff['id'] ? 'selected' : ''; ?>>
                                 <?php echo htmlspecialchars($staff['name']) . ' (' . strtoupper($staff['role']) . ')'; ?>
@@ -341,7 +397,9 @@ if (!empty($query_string_params)) $base_url = '?' . http_build_query($query_stri
                             <td style="padding: 15px; font-weight: 800; color: #166534;">+ <?php echo number_format($t['amount'], 0); ?> F</td>
                             <td style="padding: 15px;">
                                 <button onclick="editPayment(<?php echo htmlspecialchars(json_encode($t)); ?>)" style="background:none; border:none; color: #4338ca; cursor: pointer; margin-right: 10px;"><i class="fas fa-edit"></i></button>
-                                <a href="?delete=<?php echo $t['id']; ?>" onclick="return confirm('Confirmer la suppression de ce paiement ?')" style="color: #ef4444;"><i class="fas fa-trash"></i></a>
+                                <?php if (hasRole('super_admin')): ?>
+                                    <a href="?delete=<?php echo $t['id']; ?>" onclick="return confirm('Confirmer la suppression de ce paiement ?')" style="color: #ef4444;"><i class="fas fa-trash"></i></a>
+                                <?php endif; ?>
                             </td>
                         </tr>
                         <?php endforeach; ?>
@@ -415,7 +473,7 @@ if (!empty($query_string_params)) $base_url = '?' . http_build_query($query_stri
     </div>
 </div>
 
-<script src="../assets/js/admin.js"></script>
+<script src="../assets/js/admin.js?v=7"></script>
 <script>
 function newPayment() {
     document.getElementById('payment_id').value = '';

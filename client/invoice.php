@@ -13,10 +13,10 @@ $is_staff = hasRole('super_admin') || hasRole('mini_admin') || hasRole('receptio
 
 // Get reservation
 if ($is_staff) {
-    $stmt = $pdo->prepare("SELECT r.*, pc.code as promo_code_name FROM reservations r LEFT JOIN promo_codes pc ON r.promo_code_id = pc.id WHERE r.id = ?");
+    $stmt = $pdo->prepare("SELECT r.*, pc.code as promo_code_name, b.name as branch_name, b.phone as branch_phone FROM reservations r LEFT JOIN promo_codes pc ON r.promo_code_id = pc.id LEFT JOIN branches b ON r.branch_id = b.id WHERE r.id = ?");
     $stmt->execute([$id]);
 } else {
-    $stmt = $pdo->prepare("SELECT r.*, pc.code as promo_code_name FROM reservations r LEFT JOIN promo_codes pc ON r.promo_code_id = pc.id WHERE r.id = ? AND r.user_id = ?");
+    $stmt = $pdo->prepare("SELECT r.*, pc.code as promo_code_name, b.name as branch_name, b.phone as branch_phone FROM reservations r LEFT JOIN promo_codes pc ON r.promo_code_id = pc.id LEFT JOIN branches b ON r.branch_id = b.id WHERE r.id = ? AND r.user_id = ?");
     $stmt->execute([$id, $user_id]);
 }
 $res = $stmt->fetch();
@@ -94,9 +94,8 @@ $qr_url = "https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=" . urlen
         <div>
             <strong>De:</strong><br>
             Sam Event Location<br>
-            Quartier Aéroport, Niamey<br>
-            Niger<br>
-            +227 96 12 44 90
+           Branche : <?php echo htmlspecialchars($res['branch_name'] ?? 'Quartier Aéroport, Niamey'); ?><br>
+            Contact : <?php echo htmlspecialchars($res['branch_phone'] ?: '+227 96 12 44 90'); ?>
         </div>
         <div style="text-align: right;">
             <strong>À:</strong><br>

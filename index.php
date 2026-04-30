@@ -4,7 +4,15 @@ require_once 'includes/db.php';
 
 // Fetch available items
 $stmt = $pdo->query("SELECT i.*, c.name as category_name FROM items i LEFT JOIN categories c ON i.category_id = c.id WHERE i.status = 'available' ORDER BY i.category_id, i.name");
-$items = $stmt->fetchAll();
+$allItems = $stmt->fetchAll();
+$items = [];
+$seen = [];
+foreach ($allItems as $item) {
+    if (!isset($seen[$item['name']])) {
+        $seen[$item['name']] = true;
+        $items[] = $item;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="fr">

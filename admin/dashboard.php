@@ -4,20 +4,25 @@ require_once '../includes/db.php';
 require_once '../includes/auth.php';
 requireAdmin();
 
+$branchSql = getBranchSqlFilter();
+$branchSqlWhere = getBranchSqlFilter() ? "WHERE 1=1 " . getBranchSqlFilter() : "";
+$branchSqlWhereR = getBranchSqlFilter('r') ? "WHERE 1=1 " . getBranchSqlFilter('r') : "";
+
 // Monthly revenue
 $month = date('m');
 $year = date('Y');
-$stmt = $pdo->prepare("SELECT SUM(amount) FROM payments WHERE MONTH(created_at) = ? AND YEAR(created_at) = ?");
+$stmt = $pdo->prepare("SELECT SUM(amount) FROM payments p JOIN reservations r ON p.reservation_id = r.id WHERE MONTH(p.created_at) = ? AND YEAR(p.created_at) = ? " . getBranchSqlFilter('r'));
 $stmt->execute([$month, $year]);
 $monthly_rev = $stmt->fetchColumn() ?? 0;
 
 // Pending payments
-$stmt = $pdo->query("SELECT SUM(total_price - amount_paid) FROM reservations WHERE status != 'cancelled'");
+$stmt = $pdo->query("SELECT SUM(total_price - amount_paid) FROM reservations WHERE status != 'cancelled' " . getBranchSqlFilter());
 $pending_payments = $stmt->fetchColumn() ?? 0;
 
 // Counts
+// Note: items are NOT branch specific normally, but reservations are.
 $item_count = $pdo->query("SELECT COUNT(*) FROM items")->fetchColumn();
-$res_count = $pdo->query("SELECT COUNT(*) FROM reservations WHERE status = 'pending'")->fetchColumn();
+$res_count = $pdo->query("SELECT COUNT(*) FROM reservations WHERE status = 'pending' " . getBranchSqlFilter())->fetchColumn();
 
 // Chart Data (Last 6 Months)
 $chart_labels = [];
@@ -30,11 +35,11 @@ for ($i = 5; $i >= 0; $i--) {
     $m = date('m', $ts);
     $y = date('Y', $ts);
 
-    $stmt = $pdo->prepare("SELECT SUM(amount) FROM payments WHERE MONTH(created_at) = ? AND YEAR(created_at) = ?");
+    $stmt = $pdo->prepare("SELECT SUM(p.amount) FROM payments p JOIN reservations r ON p.reservation_id = r.id WHERE MONTH(p.created_at) = ? AND YEAR(p.created_at) = ? " . getBranchSqlFilter('r'));
     $stmt->execute([$m, $y]);
     $rev = $stmt->fetchColumn() ?? 0;
 
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM reservations WHERE MONTH(created_at) = ? AND YEAR(created_at) = ? AND status != 'cancelled'");
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM reservations WHERE MONTH(created_at) = ? AND YEAR(created_at) = ? AND status != 'cancelled' " . getBranchSqlFilter());
     $stmt->execute([$m, $y]);
     $res = $stmt->fetchColumn() ?? 0;
 
@@ -44,11 +49,11 @@ for ($i = 5; $i >= 0; $i--) {
 }
 
 // Top Products
-$top_items_stmt = $pdo->query("SELECT i.name, i.image_url, SUM(ri.quantity) as total_rented FROM reservation_items ri JOIN items i ON ri.item_id = i.id GROUP BY ri.item_id ORDER BY total_rented DESC LIMIT 5");
+$top_items_stmt = $pdo->query("SELECT i.name, i.image_url, SUM(ri.quantity) as total_rented FROM reservation_items ri JOIN items i ON ri.item_id = i.id JOIN reservations r ON ri.reservation_id = r.id $branchSqlWhereR GROUP BY ri.item_id ORDER BY total_rented DESC LIMIT 5");
 $top_items = $top_items_stmt->fetchAll();
 
 // Recent Payments
-$recent_payments_stmt = $pdo->query("SELECT p.amount, p.payment_method, p.created_at, r.customer_name FROM payments p JOIN reservations r ON p.reservation_id = r.id ORDER BY p.created_at DESC LIMIT 5");
+$recent_payments_stmt = $pdo->query("SELECT p.amount, p.payment_method, p.created_at, r.customer_name FROM payments p JOIN reservations r ON p.reservation_id = r.id $branchSqlWhereR ORDER BY p.created_at DESC LIMIT 5");
 $recent_payments = $recent_payments_stmt->fetchAll();
 ?>
 <!DOCTYPE html>
@@ -88,7 +93,12 @@ $recent_payments = $recent_payments_stmt->fetchAll();
                 <div
                     style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e214a4ff; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">
                     Super Admin</div>
-                <a href="users.php"><i class="fas fa-users-cog"></i> &nbsp; Utilisateurs</a>
+                <a href="branches.php"><i class="fas fa-building"></i> &nbsp; Succursales</a>
+            <?php endif; ?>
+            <?php if (hasRole('super_admin') || hasRole('mini_admin')): ?>
+                <a href="users.php"><i class="fas fa-users-cog"></i> &nbsp; <?php echo hasRole('super_admin') ? 'Utilisateurs' : 'Personnel'; ?></a>
+            <?php endif; ?>
+            <?php if (hasRole('super_admin')): ?>
                 <a href="settings.php"><i class="fas fa-tools"></i> &nbsp; Paramètres</a>
             <?php endif; ?>
 
@@ -97,14 +107,30 @@ $recent_payments = $recent_payments_stmt->fetchAll();
         </div>
 
         <div class="main-content">
-            <div
-                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px;">
-                <div>
-                    <h1 style="margin: 0; font-size: 1.8rem; color: #1a1c23;">Dashboard</h1>
-                    <p style="color: #666; margin: 5px 0 0;">Bienvenue sur votre espace de gestion</p>
-                </div>
-                <div style="color: #666; font-weight: 600;"><?php echo date('d F Y'); ?></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px;">
+            <div>
+                <h1 style="margin: 0; font-size: 1.8rem; color: #1a1c23;">Dashboard</h1>
+                <p style="color: #666; margin: 5px 0 0;">Bonjour, <?php echo htmlspecialchars($_SESSION['name'] ?? 'Admin'); ?> ! Voici les statistiques récentes.</p>
             </div>
+            
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <?php if(hasRole('super_admin')): ?>
+                <div style="background: white; border-radius: 8px; border: 1px solid #e5e7eb; padding: 2px 10px; display: flex; align-items: center;">
+                    <i class="fas fa-building" style="color: #6b7280; margin-right: 10px;"></i>
+                    <select onchange="window.location.href='?switch_branch=' + this.value" style="border: none; outline: none; padding: 8px 0; font-family: inherit; font-size: 0.95rem; color: #1f2937; background: transparent; cursor: pointer;">
+                        <option value="all" <?php echo getActiveBranch() === null ? 'selected' : ''; ?>>Toutes les succursales</option>
+                        <?php 
+                        $branches_list = $pdo->query("SELECT * FROM branches ORDER BY name ASC")->fetchAll();
+                        foreach($branches_list as $b): ?>
+                            <option value="<?php echo $b['id']; ?>" <?php echo getActiveBranch() == $b['id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($b['name']); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <?php endif; ?>
+                
+                <a href="create_reservation.php" class="contact-btn"><i class="fas fa-plus"></i> Nouvelle Réservation</a>
+            </div>
+        </div>
 
             <div class="grid-stats">
                 <div class="stat-box">

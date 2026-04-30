@@ -15,31 +15,77 @@ if (isset($_POST['update_profile'])) {
     $old_password = $_POST['old_password'] ?? '';
     $password = $_POST['password'];
 
-    // Update base info
-    if (!empty($password)) {
-        // Must verify old password first
-        $stmt = $pdo->prepare("SELECT password FROM users WHERE id = ?");
-        $stmt->execute([$user_id]);
-        $current_hash = $stmt->fetchColumn();
-
-        if (!password_verify($old_password, $current_hash)) {
-            $error = "Erreur: L'ancien mot de passe est incorrect.";
+    // Handle Profile Picture
+    $profile_pic_query = "";
+    $profile_pic_param = null;
+    if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
+        $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+        $filename = $_FILES['profile_picture']['name'];
+        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        if (in_array($ext, $allowed)) {
+            $new_name = uniqid('profile_') . '.' . $ext;
+            $destination = '../uploads/profiles/' . $new_name;
+            if (move_uploaded_file($_FILES['profile_picture']['tmp_name'], $destination)) {
+                $profile_pic_query = ", profile_picture = ?";
+                $profile_pic_param = 'uploads/profiles/' . $new_name;
+            }
         } else {
-            $hashed = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare("UPDATE users SET name = ?, email = ?, phone = ?, password = ? WHERE id = ?");
-            $stmt->execute([$name, $email, $phone, $hashed, $user_id]);
-            $msg = "Profil et mot de passe mis à jour avec succès !";
+            $error = "Format d'image non autorisé.";
         }
-    } else {
-        // Update without changing password
-        $stmt = $pdo->prepare("UPDATE users SET name = ?, email = ?, phone = ? WHERE id = ?");
-        $stmt->execute([$name, $email, $phone, $user_id]);
-        $msg = "Profil mis à jour avec succès !";
+    }
+
+    if (!$error) {
+        try {
+            // Update base info
+            if (!empty($password)) {
+                // Must verify old password first
+                $stmt = $pdo->prepare("SELECT password FROM users WHERE id = ?");
+                $stmt->execute([$user_id]);
+                $current_hash = $stmt->fetchColumn();
+
+                if (!password_verify($old_password, $current_hash)) {
+                    $error = "Erreur: L'ancien mot de passe est incorrect.";
+                } else {
+                    $hashed = password_hash($password, PASSWORD_DEFAULT);
+                    if ($profile_pic_query) {
+                        $stmt = $pdo->prepare("UPDATE users SET name = ?, email = ?, phone = ?, password = ? $profile_pic_query WHERE id = ?");
+                        $stmt->execute([$name, $email, $phone, $hashed, $profile_pic_param, $user_id]);
+                    } else {
+                        $stmt = $pdo->prepare("UPDATE users SET name = ?, email = ?, phone = ?, password = ? WHERE id = ?");
+                        $stmt->execute([$name, $email, $phone, $hashed, $user_id]);
+                    }
+                    $msg = "Profil et mot de passe mis à jour avec succès !";
+                }
+            } else {
+                // Update without changing password
+                if ($profile_pic_query) {
+                    $stmt = $pdo->prepare("UPDATE users SET name = ?, email = ?, phone = ? $profile_pic_query WHERE id = ?");
+                    $stmt->execute([$name, $email, $phone, $profile_pic_param, $user_id]);
+                } else {
+                    $stmt = $pdo->prepare("UPDATE users SET name = ?, email = ?, phone = ? WHERE id = ?");
+                    $stmt->execute([$name, $email, $phone, $user_id]);
+                }
+                $msg = "Profil mis à jour avec succès !";
+            }
+        } catch (PDOException $e) {
+            if ($e->getCode() == 23000) {
+                $pdoError = $e->getMessage();
+                if (strpos($pdoError, 'phone') !== false) {
+                    $error = "Erreur : Ce numéro de téléphone appartient déjà à un autre utilisateur.";
+                } elseif (strpos($pdoError, 'email') !== false) {
+                    $error = "Erreur : Cette adresse e-mail appartient déjà à un autre compte.";
+                } else {
+                    $error = "Erreur : Informations déjà utilisées par un autre compte.";
+                }
+            } else {
+                $error = "Une erreur interne est survenue lors de la mise à jour.";
+            }
+        }
     }
 }
 
 // Fetch current user details
-$stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+$stmt = $pdo->prepare("SELECT u.*, b.name as branch_name FROM users u LEFT JOIN branches b ON u.branch_id = b.id WHERE u.id = ?");
 $stmt->execute([$user_id]);
 $user = $stmt->fetch();
 
@@ -60,7 +106,7 @@ $recent_transactions = $stmt->fetchAll();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mon Profil - Sam Reception</title>
     <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/admin.css?v=2">
+    <link rel="stylesheet" href="../assets/css/admin.css?v=7">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body style="background: #f4f5f7;">
@@ -84,8 +130,17 @@ $recent_transactions = $stmt->fetchAll();
     </div>
 
     <div class="main-content">
-        <h2>Mon Profil</h2>
-        <p style="color: #666; margin-bottom: 30px;">Gérez vos informations personnelles et vos identifiants de connexion.</p>
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px;">
+            <div>
+                <h2>Mon Profil</h2>
+                <p style="color: #666; margin-top: 5px;">Gérez vos informations personnelles et vos identifiants de connexion.</p>
+            </div>
+            <?php if (!empty($user['branch_name'])): ?>
+            <div style="background: var(--accent-gold); color: white; padding: 8px 20px; border-radius: 30px; font-weight: 700; box-shadow: 0 4px 10px rgba(217, 119, 6, 0.3);">
+                <i class="fas fa-map-marker-alt"></i> Succursale: <?php echo htmlspecialchars($user['branch_name']); ?>
+            </div>
+            <?php endif; ?>
+        </div>
 
         <?php if ($msg): ?>
             <div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 10px; margin-bottom: 25px;">
@@ -102,7 +157,21 @@ $recent_transactions = $stmt->fetchAll();
             <!-- Left col: form -->
             <div class="card">
                 <h3>Informations Personnelles</h3>
-                <form method="POST" style="margin-top: 20px;">
+                <form method="POST" enctype="multipart/form-data" style="margin-top: 20px;">
+                    <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 25px;">
+                        <?php if (!empty($user['profile_picture'])): ?>
+                            <img src="../<?php echo htmlspecialchars($user['profile_picture']); ?>" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--accent-gold);">
+                        <?php else: ?>
+                            <div style="width: 80px; height: 80px; border-radius: 50%; background: #e5e7eb; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #9ca3af; border: 3px solid #eee;">
+                                <i class="fas fa-user"></i>
+                            </div>
+                        <?php endif; ?>
+                        <div style="flex: 1;">
+                            <label style="font-weight: 600; color: #555; display: block; margin-bottom: 5px;">Photo de profil</label>
+                            <input type="file" name="profile_picture" accept="image/*" class="form-control" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ddd;">
+                        </div>
+                    </div>
+
                     <div class="form-group">
                         <label style="font-weight: 600; color: #555; display: block; margin-bottom: 5px;">Nom Complet</label>
                         <input type="text" name="name" value="<?php echo htmlspecialchars($user['name']); ?>" required class="form-control" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 15px;">
@@ -122,10 +191,16 @@ $recent_transactions = $stmt->fetchAll();
                         <h3 style="font-size: 1.1rem; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 15px; color: #d97706;"><i class="fas fa-lock"></i> Changer de Mot de passe</h3>
                         
                         <label style="font-weight: 600; color: #555; display: block; margin-bottom: 5px;">Ancien Mot de passe <span style="color: #ef4444;">*</span></label>
-                        <input type="password" name="old_password" class="form-control" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 15px;" placeholder="Obligatoire pour changer le mot de passe">
+                        <div style="position: relative;">
+                            <input type="password" name="old_password" id="old_pwd" class="form-control" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 15px;" placeholder="Obligatoire pour changer le mot de passe">
+                            <i class="fas fa-eye" style="position: absolute; right: 15px; top: 15px; cursor: pointer; color: #999;" onclick="togglePwd('old_pwd', this)"></i>
+                        </div>
 
                         <label style="font-weight: 600; color: #555; display: block; margin-bottom: 5px;">Nouveau Mot de passe</label>
-                        <input type="password" name="password" class="form-control" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 10px;" placeholder="Laissez vide pour ne pas changer">
+                        <div style="position: relative;">
+                            <input type="password" name="password" id="new_pwd" class="form-control" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 10px;" placeholder="Laissez vide pour ne pas changer">
+                            <i class="fas fa-eye" style="position: absolute; right: 15px; top: 15px; cursor: pointer; color: #999;" onclick="togglePwd('new_pwd', this)"></i>
+                        </div>
                     </div>
 
                     <button type="submit" name="update_profile" class="contact-btn" style="width: 100%; border: none; padding: 15px; border-radius: 8px; font-size: 1rem; cursor: pointer; margin-top: 20px;">Enregistrer les modifications</button>
@@ -183,6 +258,20 @@ $recent_transactions = $stmt->fetchAll();
     </div>
 </div>
 
-<script src="../assets/js/admin.js"></script>
+<script src="../assets/js/admin.js?v=7"></script>
+<script>
+function togglePwd(id, icon) {
+    const el = document.getElementById(id);
+    if (el.type === 'password') {
+        el.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        el.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+</script>
 </body>
 </html>

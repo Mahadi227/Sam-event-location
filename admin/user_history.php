@@ -69,7 +69,7 @@ if (!empty($query_string_params)) $base_url = '?' . http_build_query($query_stri
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profil Utilisateur - Sam Admin</title>
     <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/admin.css?v=2">
+    <link rel="stylesheet" href="../assets/css/admin.css?v=7">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body style="background: #f4f5f7;">
@@ -86,6 +86,7 @@ if (!empty($query_string_params)) $base_url = '?' . http_build_query($query_stri
         <a href="items.php"><i class="fas fa-box"></i> &nbsp; Stock & Produits</a>
         <a href="reservations.php"><i class="fas fa-calendar-check"></i> &nbsp; Réservations</a>
         <a href="payments.php"><i class="fas fa-money-bill-wave"></i> &nbsp; Paiements</a>
+            <a href="transfers.php"><i class="fas fa-truck-loading"></i> &nbsp; Transferts Stock</a>
         <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse</a>
         <a href="users.php" class="active"><i class="fas fa-users-cog"></i> &nbsp; Utilisateurs</a>
         <a href="settings.php"><i class="fas fa-tools"></i> &nbsp; Paramètres</a>
@@ -211,6 +212,6 @@ if (!empty($query_string_params)) $base_url = '?' . http_build_query($query_stri
     </div>
 </div>
 
-<script src="../assets/js/admin.js"></script>
+<script src="../assets/js/admin.js?v=7"></script>
 </body>
 </html>

@@ -86,41 +86,57 @@ $recent = $stmt->fetchAll();
             <?php if (empty($recent)): ?>
                 <p style="text-align: center; color: #888; padding: 40px 0;">Vous n'avez pas encore de réservations.</p>
             <?php else: ?>
-                <div class="table-responsive">
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr style="text-align: left; border-bottom: 2px solid #eee;">
-                                <th style="padding: 15px;">Date</th>
-                                <th style="padding: 15px;">Lieu</th>
-                                <th style="padding: 15px;">Total</th>
-                                <th style="padding: 15px;">Statut</th>
-                                <th style="padding: 15px;">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($recent as $res): ?>
-                            <tr style="border-bottom: 1px solid #eee;">
-                                <td style="padding: 15px;"><?php echo date('d/m/Y', strtotime($res['event_date'])); ?></td>
-                                <td style="padding: 15px;"><?php echo htmlspecialchars($res['event_location']); ?></td>
-                                <td style="padding: 15px; font-weight: 700; color: #1f2937;"><?php echo number_format($res['total_price'], 0); ?> F</td>
-                                <td style="padding: 15px;">
-                                    <span class="status-badge <?php echo $res['status']; ?>">
-                                        <?php echo ucfirst($res['status']); ?>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <?php foreach ($recent as $res): ?>
+                        <div style="background: white; border: 1px solid #f1f5f9; border-radius: 12px; padding: 20px; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s; box-shadow: 0 2px 8px rgba(0,0,0,0.02);" onmouseover="this.style.boxShadow='0 8px 20px rgba(0,0,0,0.06)'; this.style.borderColor='#e2e8f0';" onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.02)'; this.style.borderColor='#f1f5f9';">
+                            <div style="display: flex; gap: 20px; align-items: center;">
+                                <div style="width: 50px; height: 50px; background: #f8fafc; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--primary-blue); font-size: 1.5rem;">
+                                    <i class="fas fa-calendar-day"></i>
+                                </div>
+                                <div>
+                                    <div style="font-weight: 800; color: #1e293b; font-size: 1.1rem; margin-bottom: 5px;">
+                                        Evénement du <?php echo date('d/m/Y', strtotime($res['event_date'])); ?>
+                                    </div>
+                                    <div style="color: #64748b; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
+                                        <i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($res['event_location']); ?>
+                                        <span style="color: #cbd5e1;">|</span>
+                                        <i class="fas fa-clock"></i> <?php echo htmlspecialchars(ucfirst($res['duration'])); ?>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div style="display: flex; align-items: center; gap: 25px;">
+                                <div style="text-align: right;">
+                                    <div style="font-weight: 800; color: var(--primary-blue); font-size: 1.2rem;">
+                                        <?php echo number_format($res['total_price'], 0); ?> F
+                                    </div>
+                                    <?php 
+                                        $statusConfig = [
+                                            'pending' => ['color' => '#b45309', 'bg' => '#fefce8', 'label' => 'En attente'],
+                                            'approved' => ['color' => '#1d4ed8', 'bg' => '#eff6ff', 'label' => 'Approuvé'],
+                                            'in_preparation' => ['color' => '#6d28d9', 'bg' => '#f5f3ff', 'label' => 'En préparation'],
+                                            'ready' => ['color' => '#0f766e', 'bg' => '#f0fdfa', 'label' => 'Prêt'],
+                                            'completed' => ['color' => '#15803d', 'bg' => '#f0fdf4', 'label' => 'Terminé'],
+                                            'cancelled' => ['color' => '#b91c1c', 'bg' => '#fef2f2', 'label' => 'Annulé']
+                                        ];
+                                        $s = $statusConfig[$res['status']] ?? $statusConfig['pending'];
+                                    ?>
+                                    <span style="background: <?php echo $s['bg']; ?>; color: <?php echo $s['color']; ?>; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; margin-top: 5px; display: inline-block;">
+                                        <?php echo $s['label']; ?>
                                     </span>
-                                </td>
-                                <td style="padding: 15px;">
-                                    <a href="details.php?id=<?php echo $res['id']; ?>" style="color: var(--primary-blue); font-weight: 600; text-decoration: none;">Détails</a>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                                </div>
+                                <a href="details.php?id=<?php echo $res['id']; ?>" class="contact-btn" style="padding: 10px 15px; border-radius: 8px; font-size: 0.9rem; background: #f8fafc; color: var(--primary-blue); border: 1px solid #e2e8f0;" onmouseover="this.style.background='var(--primary-blue)'; this.style.color='white';" onmouseout="this.style.background='#f8fafc'; this.style.color='var(--primary-blue)';">
+                                    Détails <i class="fas fa-arrow-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
             <?php endif; ?>
         </div>
     </div>
 </div>
 
-<script src="../assets/js/admin.js"></script>
+<script src="../assets/js/admin.js?v=7"></script>
 </body>
 </html>

@@ -2,6 +2,7 @@
 // receptionist/caisse.php
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
+require_once '../includes/notifications.php';
 requireStaff();
 
 // Identity checks
@@ -16,7 +17,8 @@ $period = $_GET['period'] ?? 'day';
 // Fetch users for dropdown if admin
 $all_staff = [];
 if ($is_admin) {
-    $stmt = $pdo->query("SELECT id, name, role FROM users WHERE role IN ('super_admin', 'mini_admin', 'receptionist')");
+    $userBranchFilter = getBranchSqlFilter('u');
+    $stmt = $pdo->query("SELECT u.id, u.name, u.role FROM users u WHERE u.role IN ('super_admin', 'mini_admin', 'receptionist') $userBranchFilter");
     $all_staff = $stmt->fetchAll();
 }
 
@@ -62,23 +64,26 @@ if ($filter_user !== 'all' && $filter_user !== '') {
 
 $queryParams = array_merge($dateParams, $userParams);
 
+$branchFilterR = getBranchSqlFilter('r');
+
 // Analytics Queries
 // 1. Total par methode de paiement (Période)
 $stmt = $pdo->prepare("
     SELECT p.payment_method, SUM(p.amount) as total 
     FROM payments p
-    WHERE $dateFilterSql $userFilterSql
+    JOIN reservations r ON p.reservation_id = r.id
+    WHERE $dateFilterSql $userFilterSql $branchFilterR
     GROUP BY p.payment_method
 ");
 $stmt->execute($queryParams);
 $methods_today = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
 // 2. Total global (Période choisie)
-$stmt = $pdo->prepare("SELECT SUM(p.amount) FROM payments p WHERE $dateFilterSql $userFilterSql");
+$stmt = $pdo->prepare("SELECT SUM(p.amount) FROM payments p JOIN reservations r ON p.reservation_id = r.id WHERE $dateFilterSql $userFilterSql $branchFilterR");
 $stmt->execute($queryParams);
 $total_today = $stmt->fetchColumn() ?: 0;
 
-$stmt = $pdo->prepare("SELECT SUM(p.amount) FROM payments p WHERE MONTH(p.created_at) = MONTH(?) AND YEAR(p.created_at) = YEAR(?)$userFilterSql");
+$stmt = $pdo->prepare("SELECT SUM(p.amount) FROM payments p JOIN reservations r ON p.reservation_id = r.id WHERE MONTH(p.created_at) = MONTH(?) AND YEAR(p.created_at) = YEAR(?)$userFilterSql $branchFilterR");
 $stmt->execute(array_merge([$date, $date], $userParams));
 $total_month = $stmt->fetchColumn() ?: 0;
 
@@ -95,7 +100,7 @@ $countStmt = $pdo->prepare("
     SELECT COUNT(*) 
     FROM payments p
     JOIN reservations r ON p.reservation_id = r.id
-    WHERE $dateFilterSql $userFilterSql
+    WHERE $dateFilterSql $userFilterSql $branchFilterR
 ");
 $countStmt->execute($queryParams);
 $total_records = $countStmt->fetchColumn();
@@ -105,7 +110,7 @@ $stmt = $pdo->prepare("
     SELECT p.*, r.customer_name 
     FROM payments p
     JOIN reservations r ON p.reservation_id = r.id
-    WHERE $dateFilterSql $userFilterSql
+    WHERE $dateFilterSql $userFilterSql $branchFilterR
     ORDER BY p.created_at DESC
     LIMIT $limit OFFSET $offset
 ");
@@ -128,7 +133,7 @@ if (!empty($query_string_params)) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Caisse - Sam Reception</title>
     <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/admin.css?v=2">
+    <link rel="stylesheet" href="../assets/css/admin.css?v=7">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .method-card {
@@ -316,7 +321,7 @@ if (!empty($query_string_params)) {
     </div>
 </div>
 
-<script src="../assets/js/admin.js"></script>
+<script src="../assets/js/admin.js?v=7"></script>
 </body>
 </html>
 

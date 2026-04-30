@@ -4,11 +4,17 @@ require_once 'includes/db.php';
 session_start();
 
 $error = $_GET['error'] ?? '';
+$branch_id = $_GET['branch_id'] ?? null;
 
-$stmt = $pdo->query("SELECT c.name as category_name, i.* FROM items i JOIN categories c ON i.category_id = c.id WHERE i.status = 'available' ORDER BY c.name, i.name");
-$items_by_cat = [];
-while ($row = $stmt->fetch()) {
-    $items_by_cat[$row['category_name']][] = $row;
+$branches = $pdo->query("SELECT * FROM branches ORDER BY name")->fetchAll();
+
+if ($branch_id) {
+    $stmt = $pdo->prepare("SELECT c.name as category_name, i.* FROM items i JOIN categories c ON i.category_id = c.id WHERE i.status = 'available' AND i.branch_id = ? ORDER BY c.name, i.name");
+    $stmt->execute([$branch_id]);
+    $items_by_cat = [];
+    while ($row = $stmt->fetch()) {
+        $items_by_cat[$row['category_name']][] = $row;
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -130,14 +136,37 @@ while ($row = $stmt->fetch()) {
         <?php endif; ?>
 
         <form id="aiBookingForm" action="process_booking_ai.php" method="POST">
+            <input type="hidden" name="branch_id" value="<?php echo htmlspecialchars($branch_id ?? ''); ?>">
+
+            <?php if (!$branch_id): ?>
+                <div style="background: white; padding: 40px; border-radius: 20px; box-shadow: var(--shadow-strong); text-align: center;">
+                    <h3>Veuillez sélectionner l'agence de retrait</h3>
+                    <p style="color: #666; margin-bottom: 20px;">Nos stocks varient en fonction de nos succursales.</p>
+                    <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
+                        <?php foreach($branches as $b): ?>
+                            <a href="?branch_id=<?php echo $b['id']; ?>" style="display: block; width: 250px; padding: 25px; border: 2px solid var(--accent-gold); border-radius: 15px; text-decoration: none; color: #333; transition: 0.3s; background: #fff;" onmouseover="this.style.background='var(--accent-gold)'; this.style.color='white';" onmouseout="this.style.background='#fff'; this.style.color='#333';">
+                                <i class="fas fa-building" style="font-size: 2rem; margin-bottom: 10px;"></i><br>
+                                <strong style="font-size: 1.2rem;"><?php echo htmlspecialchars($b['name']); ?></strong><br>
+                                <span style="font-size: 0.9rem;"><?php echo htmlspecialchars($b['location'] ?? ''); ?></span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php else: ?>
+
             <div class="booking-layout">
                 <div class="wizard-content">
                     <!-- STEP 1: ITEMS -->
                     <div class="step-panel active" id="panel1">
                         <h3>Sélectionnez vos articles</h3>
+                        <?php if(empty($items_by_cat)): ?>
+                            <p style="color:red; font-weight:bold;">Aucun article disponible dans cette succursale pour le moment.</p>
+                        <?php endif; ?>
+                        
                         <?php foreach ($items_by_cat as $cat_name => $cat_items): ?>
                             <div style="margin: 30px 0 15px; font-weight: 800; color: #333; border-bottom: 2px solid #eee;"><?php echo htmlspecialchars($cat_name); ?></div>
                             <?php foreach ($cat_items as $item): ?>
+
                                 <div class="item-row" style="padding: 15px; background: #fff; border-radius: 15px; margin-bottom: 10px; border: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
                                     <div style="display: flex; align-items: center; gap: 15px;">
                                         <?php if (!empty($item['image_url'])): ?>
@@ -451,7 +480,7 @@ while ($row = $stmt->fetch()) {
             }
         });
     </script>
-
+    <?php endif; ?>
 </body>
 
 </html>

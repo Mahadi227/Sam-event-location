@@ -3,6 +3,7 @@
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
 requireStaff();
+$branchSql = getBranchSqlFilter();
 
 // Filter logic
 $where = [];
@@ -23,7 +24,7 @@ if (!empty($_GET['search'])) {
     $params[] = "%".$_GET['search']."%";
 }
 
-$whereClause = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
+$extraWhere = !empty($where) ? " AND " . implode(" AND ", $where) : "";
 
 // Pagination setup
 $page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -32,12 +33,12 @@ $limit = 10;
 $offset = ($page - 1) * $limit;
 
 // Count total matching records
-$countStmt = $pdo->prepare("SELECT COUNT(*) FROM reservations $whereClause");
+$countStmt = $pdo->prepare("SELECT COUNT(*) FROM reservations WHERE 1=1 $branchSql $extraWhere");
 $countStmt->execute($params);
 $total_records = $countStmt->fetchColumn();
 $total_pages = ceil($total_records / $limit);
 
-$stmt = $pdo->prepare("SELECT * FROM reservations $whereClause ORDER BY created_at DESC LIMIT $limit OFFSET $offset");
+$stmt = $pdo->prepare("SELECT * FROM reservations WHERE 1=1 $branchSql $extraWhere ORDER BY created_at DESC LIMIT $limit OFFSET $offset");
 $stmt->execute($params);
 $reservations = $stmt->fetchAll();
 
@@ -56,7 +57,7 @@ if (!empty($query_string_params)) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestion Reservations - Sam Event</title>
     <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/admin.css?v=2">
+    <link rel="stylesheet" href="../assets/css/admin.css?v=7">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body style="background: #f4f5f7;">
@@ -171,6 +172,6 @@ if (!empty($query_string_params)) {
 </div>
 </div>
 
-<script src="../assets/js/admin.js"></script>
+<script src="../assets/js/admin.js?v=7"></script>
 </body>
 </html>

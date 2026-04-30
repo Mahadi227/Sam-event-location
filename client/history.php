@@ -96,6 +96,6 @@ $all = $reservations->fetchAll();
 </div>
 </div>
 
-<script src="../assets/js/admin.js"></script>
+<script src="../assets/js/admin.js?v=7"></script>
 </body>
 </html>

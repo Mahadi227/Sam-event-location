@@ -11,9 +11,26 @@ $first_day = "$year-$month-01";
 $days_in_month = date('t', strtotime($first_day));
 $start_day_of_week = date('w', strtotime($first_day));
 
-// Get reservations for this month
-$stmt = $pdo->prepare("SELECT id, event_date, customer_name, status FROM reservations WHERE MONTH(event_date) = ? AND YEAR(event_date) = ?");
-$stmt->execute([$month, $year]);
+$branches = $pdo->query("SELECT * FROM branches ORDER BY name")->fetchAll();
+$selected_branch = $_GET['branch'] ?? '';
+
+// Build the SQL query for reservations
+$sql = "SELECT id, event_date, customer_name, status FROM reservations WHERE MONTH(event_date) = ? AND YEAR(event_date) = ?";
+$params = [$month, $year];
+
+if (!empty($selected_branch)) {
+    $sql .= " AND branch_id = ?";
+    $params[] = $selected_branch;
+}
+
+$branchSql = getBranchSqlFilter();
+if ($branchSql) {
+    $sql .= $branchSql;
+}
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
+
 $res_data = [];
 while ($row = $stmt->fetch()) {
     $res_data[$row['event_date']][] = $row;
@@ -32,7 +49,7 @@ $prev_year = date('Y', strtotime("-1 month", strtotime($first_day)));
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calendrier - Sam Reception</title>
     <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/admin.css?v=2">
+    <link rel="stylesheet" href="../assets/css/admin.css?v=7">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
     .calendar-grid {
@@ -106,19 +123,33 @@ $prev_year = date('Y', strtotime("-1 month", strtotime($first_day)));
         <a href="calendar.php" class="active"><i class="fas fa-calendar-alt"></i> &nbsp; Calendrier</a>
         <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse (Shift)</a>
         <a href="profile.php"><i class="fas fa-user"></i> &nbsp; Mon Profil</a>
-        <a href="../logout.php" style="margin-top: 50px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> &nbsp; Déconnexion</a>
+        <a href="../logout.php" style="margin-top: 50px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> &nbsp; DÃ©connexion</a>
     </div>
 
     <div class="main-content">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
             <h2>Planning des Réservations</h2>
-            <div>
-                <a href="?month=<?php echo $prev_month; ?>&year=<?php echo $prev_year; ?>" class="contact-btn"
-                    style="padding: 5px 15px;"><i class="fas fa-chevron-left"></i></a>
-                <span style="font-weight: 800; margin: 0 20px;"><?php echo date('F Y', strtotime($first_day)); ?></span>
-                <a href="?month=<?php echo $next_month; ?>&year=<?php echo $next_year; ?>" class="contact-btn"
-                    style="padding: 5px 15px;"><i class="fas fa-chevron-right"></i></a>
-            </div>
+            <form method="GET" style="display: flex; gap: 15px; align-items: center; margin: 0;">
+                <input type="hidden" name="month" value="<?php echo $month; ?>">
+                <input type="hidden" name="year" value="<?php echo $year; ?>">
+                
+                <?php if (hasRole('super_admin')): ?>
+                <select name="branch" class="form-control" style="padding: 10px; border-radius: 8px; border: 1px solid #ddd;" onchange="this.form.submit()">
+                    <option value="">Toutes les succursales</option>
+                    <?php foreach ($branches as $b): ?>
+                        <option value="<?php echo $b['id']; ?>" <?php echo $selected_branch == $b['id'] ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($b['name']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <?php endif; ?>
+
+                <div>
+                    <a href="?month=<?php echo $prev_month; ?>&year=<?php echo $prev_year; ?>&branch=<?php echo urlencode($selected_branch); ?>" class="contact-btn" style="padding: 5px 15px;"><i class="fas fa-chevron-left"></i></a>
+                    <span style="font-weight: 800; margin: 0 20px;"><?php echo date('F Y', strtotime($first_day)); ?></span>
+                    <a href="?month=<?php echo $next_month; ?>&year=<?php echo $next_year; ?>&branch=<?php echo urlencode($selected_branch); ?>" class="contact-btn" style="padding: 5px 15px;"><i class="fas fa-chevron-right"></i></a>
+                </div>
+            </form>
         </div>
 
         <div style="overflow-x: auto; background: white; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
@@ -155,7 +186,7 @@ $prev_year = date('Y', strtotime("-1 month", strtotime($first_day)));
 
                 if (isset($res_data[$date_str])) {
                     foreach ($res_data[$date_str] as $r) {
-                        echo '<a href="manage.php?id=' . $r['id'] . '" class="res-pill ' . $r['status'] . '" title="Voir la réservation">' . htmlspecialchars($r['customer_name']) . '</a>';
+                        echo '<a href="manage.php?id=' . $r['id'] . '" class="res-pill ' . $r['status'] . '" title="Voir la rÃ©servation">' . htmlspecialchars($r['customer_name']) . '</a>';
                     }
                 }
 
@@ -167,7 +198,7 @@ $prev_year = date('Y', strtotime("-1 month", strtotime($first_day)));
     </div>
 </div>
 
-<script src="../assets/js/admin.js"></script>
+<script src="../assets/js/admin.js?v=7"></script>
 </body>
 
 </html>

@@ -390,7 +390,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['proof'])) {
 </div>
 <?php endif; ?>
 
-<script src="../assets/js/admin.js"></script>
+<script src="../assets/js/admin.js?v=7"></script>
 <script>
     const resData = {
         duration: <?php echo $res['duration_days']; ?>,
