@@ -438,7 +438,12 @@ function newItem() {
     document.getElementById('existing_image').value = '';
     document.getElementById('item_name').value = '';
     document.getElementById('item_cat').value = '';
-    if(document.getElementById('item_branch')) document.getElementById('item_branch').value = '';
+    
+    const branchField = document.getElementById('item_branch');
+    if (branchField && branchField.tagName === 'SELECT') {
+        branchField.selectedIndex = 0;
+    }
+    
     document.getElementById('item_price').value = '';
     document.getElementById('item_qty').value = '';
     document.getElementById('item_status').value = 'available';
@@ -455,7 +460,12 @@ function editItem(item) {
     document.getElementById('existing_image').value = item.image_url || '';
     document.getElementById('item_name').value = item.name;
     document.getElementById('item_cat').value = item.category_id;
-    if(document.getElementById('item_branch')) document.getElementById('item_branch').value = item.branch_id;
+    
+    const branchField = document.getElementById('item_branch');
+    if (branchField) {
+        branchField.value = item.branch_id;
+    }
+    
     document.getElementById('item_price').value = item.price_per_day;
     document.getElementById('item_qty').value = item.quantity_total;
     document.getElementById('item_status').value = item.status;
