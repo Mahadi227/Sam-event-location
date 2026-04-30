@@ -30,10 +30,10 @@ if (!$id) {
 
 // Get reservation
 if ($is_token_access) {
-    $stmt = $pdo->prepare("SELECT r.*, pc.code as promo_code_name FROM reservations r LEFT JOIN promo_codes pc ON r.promo_code_id = pc.id WHERE r.id = ?");
+    $stmt = $pdo->prepare("SELECT r.*, pc.code as promo_code_name, b.name as branch_name FROM reservations r LEFT JOIN promo_codes pc ON r.promo_code_id = pc.id LEFT JOIN branches b ON r.branch_id = b.id WHERE r.id = ?");
     $stmt->execute([$id]);
 } else {
-    $stmt = $pdo->prepare("SELECT r.*, pc.code as promo_code_name FROM reservations r LEFT JOIN promo_codes pc ON r.promo_code_id = pc.id WHERE r.id = ? AND r.user_id = ?");
+    $stmt = $pdo->prepare("SELECT r.*, pc.code as promo_code_name, b.name as branch_name FROM reservations r LEFT JOIN promo_codes pc ON r.promo_code_id = pc.id LEFT JOIN branches b ON r.branch_id = b.id WHERE r.id = ? AND r.user_id = ?");
     $stmt->execute([$id, $user_id]);
 }
 $res = $stmt->fetch();
@@ -307,6 +307,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['proof'])) {
                 <div id="viewInfo">
                     <p><strong>Date :</strong> <?php echo date('d/m/Y', strtotime($res['event_date'])); ?></p>
                     <p><strong>Durée :</strong> <?php echo htmlspecialchars($res['duration_days'] ?? 1); ?> jour(s)</p>
+                    <p><strong>Succursale :</strong> <?php echo htmlspecialchars($res['branch_name'] ?? 'Principale'); ?></p>
                     <p><strong>Lieu :</strong> <?php echo htmlspecialchars($res['event_location']); ?> <?php if($res['distance_km']) echo '(Distance : '.$res['distance_km'].' km)'; ?></p>
                     <p><strong>Client :</strong> <?php echo htmlspecialchars($res['customer_name']); ?></p>
                     <p><strong>Tel :</strong> <?php echo htmlspecialchars($res['customer_phone']); ?></p>
