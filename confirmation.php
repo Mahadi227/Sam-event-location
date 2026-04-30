@@ -8,7 +8,12 @@ if (!$id) {
     exit;
 }
 
-$stmt = $pdo->prepare("SELECT * FROM reservations WHERE id = ?");
+$stmt = $pdo->prepare("
+    SELECT r.*, b.name as branch_name 
+    FROM reservations r 
+    LEFT JOIN branches b ON r.branch_id = b.id 
+    WHERE r.id = ?
+");
 $stmt->execute([$id]);
 $reservation = $stmt->fetch();
 
@@ -301,6 +306,10 @@ if (!$reservation) {
             <div class="detail-row">
                 <span class="detail-label"><i class="fas fa-calendar-alt"></i> Date prévue</span>
                 <span class="detail-value"><?php echo date('d/m/Y', strtotime($reservation['event_date'])); ?></span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label"><i class="fas fa-building"></i> Branch</span>
+                <span class="detail-value"><?php echo htmlspecialchars($reservation['branch_name'] ?? 'Principale'); ?></span>
             </div>
             <div class="detail-row">
                 <span class="detail-label"><i class="fas fa-wallet"></i> Montant Total</span>

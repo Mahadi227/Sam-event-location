@@ -10,7 +10,12 @@ if (!$id || !$hash) {
 }
 
 // Fetch reservation
-$stmt = $pdo->prepare("SELECT * FROM reservations WHERE id = ?");
+$stmt = $pdo->prepare("
+    SELECT r.*, b.name as branch_name 
+    FROM reservations r 
+    LEFT JOIN branches b ON r.branch_id = b.id 
+    WHERE r.id = ?
+");
 $stmt->execute([$id]);
 $res = $stmt->fetch();
 
@@ -83,6 +88,10 @@ $status_color = $status_colors[$res['status']] ?? '#9ca3af';
         <div class="data-row">
             <div class="data-label">Date de l'événement</div>
             <div class="data-value"><?php echo date('d/m/Y', strtotime($res['event_date'])); ?></div>
+        </div>
+        <div class="data-row">
+            <div class="data-label">Branch</div>
+            <div class="data-value"><?php echo htmlspecialchars($res['branch_name'] ?? 'Principale'); ?></div>
         </div>
         <div class="data-row">
             <div class="data-label">Statut Dossier</div>
