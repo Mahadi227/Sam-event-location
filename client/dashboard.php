@@ -100,7 +100,7 @@ $recent = $stmt->fetchAll();
                                     <div style="color: #64748b; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
                                         <i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($res['event_location']); ?>
                                         <span style="color: #cbd5e1;">|</span>
-                                        <i class="fas fa-clock"></i> <?php echo htmlspecialchars(ucfirst($res['duration'])); ?>
+                                        <i class="fas fa-clock"></i> <?php echo htmlspecialchars(($res['duration_days'] ?? 1) . ' jour(s)'); ?>
                                     </div>
                                 </div>
                             </div>
