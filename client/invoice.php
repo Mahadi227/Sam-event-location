@@ -121,8 +121,8 @@ $qr_url = "https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=" . urlen
             <tr>
                 <td><?php echo htmlspecialchars($item['item_name']); ?></td>
                 <td><?php echo $item['quantity']; ?></td>
-                <td><?php echo number_format($item['price_at_time'], 0); ?> FCFA</td>
-                <td><?php echo number_format($item['price_at_time'] * $item['quantity'], 0); ?> FCFA</td>
+                <td><?php echo number_format($item['price_at_time'], 0); ?> <?php echo getCurrency(); ?></td>
+                <td><?php echo number_format($item['price_at_time'] * $item['quantity'], 0); ?> <?php echo getCurrency(); ?></td>
             </tr>
             <?php endforeach; ?>
         </tbody>
@@ -130,7 +130,7 @@ $qr_url = "https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=" . urlen
 
     <?php if ($res['discount_amount'] > 0): ?>
     <div style="text-align: right; font-size: 16px; margin-bottom: 10px; color: #15803d; font-weight: bold;">
-        Remise Spéciale <?php echo $res['promo_code_name'] ? '(Code: ' . htmlspecialchars($res['promo_code_name']) . ')' : ''; ?> : -<?php echo number_format($res['discount_amount'], 0); ?> FCFA
+        Remise Spéciale <?php echo $res['promo_code_name'] ? '(Code: ' . htmlspecialchars($res['promo_code_name']) . ')' : ''; ?> : -<?php echo number_format($res['discount_amount'], 0); ?> <?php echo getCurrency(); ?>
     </div>
     <?php endif; ?>
 
@@ -143,12 +143,12 @@ $qr_url = "https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=" . urlen
             <div style="width: 350px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 1.1rem; color: #555;">
                     <span>Montant Total:</span>
-                    <strong><?php echo number_format($total_price, 0); ?> FCFA</strong>
+                    <strong><?php echo number_format($total_price, 0); ?> <?php echo getCurrency(); ?></strong>
                 </div>
                 
                 <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 1.1rem;">
                     <span style="color: #555;">Montant Payé:</span>
-                    <strong style="color: #166534;"><?php echo number_format($amount_paid, 0); ?> FCFA</strong>
+                    <strong style="color: #166534;"><?php echo number_format($amount_paid, 0); ?> <?php echo getCurrency(); ?></strong>
                 </div>
 
                 <?php if ($amount_paid > 0 && $payment_method !== 'N/A'): ?>
@@ -165,7 +165,7 @@ $qr_url = "https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=" . urlen
                 <?php if ($reste > 0): ?>
                 <div style="display: flex; justify-content: space-between; padding-top: 15px; border-top: 2px dashed #ddd; margin-top: 10px;">
                     <span style="color: #ef4444; font-weight: bold; font-size: 1.2rem;">Reste à payer:</span>
-                    <strong style="color: #ef4444; font-size: 1.4rem;"><?php echo number_format($reste, 0); ?> FCFA</strong>
+                    <strong style="color: #ef4444; font-size: 1.4rem;"><?php echo number_format($reste, 0); ?> <?php echo getCurrency(); ?></strong>
                 </div>
                 <?php endif; ?>
                 

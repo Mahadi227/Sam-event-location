@@ -349,7 +349,7 @@ while ($row = $stmt->fetch()) {
                                 <span><?php echo htmlspecialchars($it['item_name']); ?></span>
                             </td>
                             <td style="padding: 10px;"><?php echo $it['quantity']; ?></td>
-                            <td style="padding: 10px;"><?php echo number_format($it['price_at_time'], 0); ?> F</td>
+                            <td style="padding: 10px;"><?php echo number_format($it['price_at_time'], 0); ?> <?php echo getCurrency(); ?></td>
                             <td style="padding: 10px;"><strong><?php echo number_format($it['price_at_time'] * $it['quantity'], 0); ?> F</strong></td>
                         </tr>
                         <?php endforeach; ?>
@@ -357,12 +357,12 @@ while ($row = $stmt->fetch()) {
                     
                     <?php if ($res['discount_amount'] > 0): ?>
                     <div style="text-align: right; margin-top: 15px; font-size: 1rem; color: #15803d; font-weight: 700;">
-                        Remise Promo <?php echo $res['promo_code_name'] ? '(<i class="fas fa-tag"></i> ' . htmlspecialchars($res['promo_code_name']) . ')' : ''; ?> : - <?php echo number_format($res['discount_amount'], 0); ?> FCFA
+                        Remise Promo <?php echo $res['promo_code_name'] ? '(<i class="fas fa-tag"></i> ' . htmlspecialchars($res['promo_code_name']) . ')' : ''; ?> : - <?php echo number_format($res['discount_amount'], 0); ?> <?php echo getCurrency(); ?>
                     </div>
                     <?php endif; ?>
                     
                     <div style="text-align: right; margin-top: 10px; font-size: 1.2rem; color: var(--secondary-orange); font-weight: 800;">
-                        TOTAL : <?php echo number_format($res['total_price'], 0); ?> FCFA
+                        TOTAL : <?php echo number_format($res['total_price'], 0); ?> <?php echo getCurrency(); ?>
                     </div>
                 </div>
 
@@ -427,7 +427,7 @@ while ($row = $stmt->fetch()) {
                         <tr style="border-bottom: 1px solid #eee;">
                             <td style="padding: 10px;"><?php echo date('d/m/Y H:i', strtotime($p['created_at'])); ?></td>
                             <td style="padding: 10px;"><span class="method-tag"><?php echo strtoupper($p['payment_method']); ?></span></td>
-                            <td style="padding: 10px; font-weight: 700; color: #166534;">+ <?php echo number_format($p['amount'], 0); ?> F</td>
+                            <td style="padding: 10px; font-weight: 700; color: #166534;">+ <?php echo number_format($p['amount'], 0); ?> <?php echo getCurrency(); ?></td>
                             <td style="padding: 10px; font-size: 0.8rem; color: #666;"><?php echo htmlspecialchars($p['transaction_ref']); ?></td>
                         </tr>
                         <?php endforeach; ?>
@@ -460,7 +460,7 @@ while ($row = $stmt->fetch()) {
                 <h3>Enregistrer Paiement</h3>
                 <div style="margin: 15px 0;">
                     <div style="font-size: 0.9rem; color: #666;">Reste à payer :</div>
-                    <div style="font-size: 1.5rem; font-weight: 800; color: #991b1b;"><?php echo number_format($res['total_price'] - $res['amount_paid'], 0); ?> FCFA</div>
+                    <div style="font-size: 1.5rem; font-weight: 800; color: #991b1b;"><?php echo number_format($res['total_price'] - $res['amount_paid'], 0); ?> <?php echo getCurrency(); ?></div>
                 </div>
                 <form method="POST">
                     <div class="form-group">
@@ -530,7 +530,7 @@ while ($row = $stmt->fetch()) {
                 body: JSON.stringify(data)
             });
             const result = await response.json();
-            document.getElementById('newTotalPreview').innerText = (result.total || 0).toLocaleString() + ' FCFA';
+            document.getElementById('newTotalPreview').innerText = (result.total || 0).toLocaleString() + ' <?php echo getCurrency(); ?>';
         } catch(e) {
             console.error('Erreur API:', e);
             document.getElementById('newTotalPreview').innerText = 'Erreur';

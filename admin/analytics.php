@@ -97,9 +97,9 @@ $chart_revenue = json_encode(array_column($branch_stats, 'revenue'));
                     <?php foreach ($branch_stats as $stat): ?>
                         <tr style="border-bottom: 1px solid #f1f5f9;">
                             <td style="padding: 20px; font-weight: 700; color: #1e293b;"><?php echo htmlspecialchars($stat['name']); ?></td>
-                            <td style="padding: 20px; text-align: right; font-weight: 600; color: #10b981;"><?php echo number_format($stat['revenue'], 0); ?> F</td>
+                            <td style="padding: 20px; text-align: right; font-weight: 600; color: #10b981;"><?php echo number_format($stat['revenue'], 0); ?> <?php echo getCurrency(); ?></td>
                             <td style="padding: 20px; text-align: right; font-weight: 600; color: #4f46e5;"><?php echo $stat['active_res']; ?></td>
-                            <td style="padding: 20px; text-align: right; font-weight: 600; color: #64748b;"><?php echo number_format($stat['inventory_value'], 0); ?> F</td>
+                            <td style="padding: 20px; text-align: right; font-weight: 600; color: #64748b;"><?php echo number_format($stat['inventory_value'], 0); ?> <?php echo getCurrency(); ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>

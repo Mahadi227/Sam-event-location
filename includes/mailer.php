@@ -44,7 +44,7 @@ function sendReservationEmail($pdo, $reservation_id, $customer_email = null)
         <tr style='border-bottom:1px solid #eee;'>
             <td style='padding:10px;'>" . htmlspecialchars($item['name']) . "</td>
             <td style='padding:10px;text-align:center;'>" . $item['quantity'] . "</td>
-            <td style='padding:10px;text-align:right;'>" . number_format($item['price_at_time'], 0, ',', ' ') . " F</td>
+            <td style='padding:10px;text-align:right;'>" . number_format($item['price_at_time'], 0, ',', ' ') . " <?php echo getCurrency(); ?></td>
         </tr>";
     }
     $items_html .= "</table>";
@@ -71,7 +71,7 @@ function sendReservationEmail($pdo, $reservation_id, $customer_email = null)
             <div style='background: #f4f5f7; padding: 15px; margin-top: 20px; border-radius: 8px;'>
                 <p style='margin: 0; font-size: 1.2rem; display: flex; justify-content: space-between;'>
                     <strong>Total:</strong> 
-                    <span style='color: #166534;'>" . number_format($res['total_price'], 0, ',', ' ') . " FCFA</span>
+                    <span style='color: #166534;'>" . number_format($res['total_price'], 0, ',', ' ') . " <?php echo getCurrency(); ?></span>
                 </p>
                 " . ($res['promo_code_name'] ? "<p style='margin: 5px 0 0; color: #bfa100; font-size: 0.9rem;'>Code Promo: " . htmlspecialchars($res['promo_code_name']) . " (-" . number_format($res['discount_amount'], 0, ',', ' ') . " F)</p>" : "") . "
             </div>

@@ -394,7 +394,7 @@ if (!empty($query_string_params)) $base_url = '?' . http_build_query($query_stri
                             <td style="padding: 15px; color: #555;"><i class="fas fa-user-circle"></i> <?php echo htmlspecialchars($t['staff_name'] ?? 'Admin/Système'); ?></td>
                             <td style="padding: 15px;"><span class="method-tag"><?php echo strtoupper($t['payment_method']); ?></span></td>
                             <td style="padding: 15px; font-size: 0.8rem; color: #888;"><?php echo $t['transaction_ref'] ? htmlspecialchars($t['transaction_ref']) : '-'; ?></td>
-                            <td style="padding: 15px; font-weight: 800; color: #166534;">+ <?php echo number_format($t['amount'], 0); ?> F</td>
+                            <td style="padding: 15px; font-weight: 800; color: #166534;">+ <?php echo number_format($t['amount'], 0); ?> <?php echo getCurrency(); ?></td>
                             <td style="padding: 15px;">
                                 <button onclick="editPayment(<?php echo htmlspecialchars(json_encode($t)); ?>)" style="background:none; border:none; color: #4338ca; cursor: pointer; margin-right: 10px;"><i class="fas fa-edit"></i></button>
                                 <?php if (hasRole('super_admin')): ?>

@@ -72,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div style="text-align: left;">
                     <div style="font-weight: 800; color: var(--primary-blue);">Réservation #<?php echo $res['id']; ?></div>
                     <div style="font-size: 0.9rem; color: #666;"><?php echo date('d/m/Y', strtotime($res['event_date'])); ?> - <?php echo htmlspecialchars($res['event_location']); ?></div>
-                    <div style="font-weight: 700; color: var(--secondary-orange); margin-top: 5px;"><?php echo number_format($res['total_price'], 0); ?> FCFA</div>
+                    <div style="font-weight: 700; color: var(--secondary-orange); margin-top: 5px;"><?php echo number_format($res['total_price'], 0); ?> <?php echo getCurrency(); ?></div>
                 </div>
                 <div>
                     <span class="status-badge <?php echo $res['status']; ?>">

@@ -95,7 +95,7 @@ $pending_count = $pdo->query("SELECT COUNT(*) FROM reservations WHERE status = '
                                 <td style="padding: 12px;">
                                     <strong><?php echo htmlspecialchars($r['customer_name']); ?></strong></td>
                                 <td style="padding: 12px;"><?php echo htmlspecialchars($r['event_location']); ?></td>
-                                <td style="padding: 12px;"><?php echo number_format($r['total_price'], 0); ?> FCFA</td>
+                                <td style="padding: 12px;"><?php echo number_format($r['total_price'], 0); ?> <?php echo getCurrency(); ?></td>
                                 <td style="padding: 12px;"><span
                                         class="status-tag <?php echo $r['status']; ?>"><?php echo ucfirst($r['status']); ?></span>
                                 </td>

@@ -68,7 +68,7 @@ $all = $reservations->fetchAll();
                             <td style="padding: 15px;">#<?php echo $res['id']; ?></td>
                             <td style="padding: 15px;"><?php echo date('d/m/Y', strtotime($res['event_date'])); ?></td>
                             <td style="padding: 15px;"><?php echo htmlspecialchars($res['event_location']); ?></td>
-                            <td style="padding: 15px; font-weight: 700; color: var(--secondary-orange);"><?php echo number_format($res['total_price'], 0); ?> FCFA</td>
+                            <td style="padding: 15px; font-weight: 700; color: var(--secondary-orange);"><?php echo number_format($res['total_price'], 0); ?> <?php echo getCurrency(); ?></td>
                             <td style="padding: 15px;">
                                 <span class="status-badge <?php echo $res['status']; ?>">
                                     <?php echo ucfirst($res['status']); ?>

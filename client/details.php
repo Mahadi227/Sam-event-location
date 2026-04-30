@@ -228,18 +228,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['proof'])) {
                             <?php endif; ?>
                             <div>
                                 <strong><?php echo htmlspecialchars($item['item_name']); ?></strong><br>
-                                <small><?php echo number_format($item['price_at_time'], 0); ?> FCFA x <?php echo $item['quantity']; ?></small>
+                                <small><?php echo number_format($item['price_at_time'], 0); ?> <?php echo getCurrency(); ?> x <?php echo $item['quantity']; ?></small>
                             </div>
                         </div>
                         <div style="font-weight: 700;">
-                            <?php echo number_format($item['price_at_time'] * $item['quantity'], 0); ?> FCFA
+                            <?php echo number_format($item['price_at_time'] * $item['quantity'], 0); ?> <?php echo getCurrency(); ?>
                         </div>
                     </div>
                     <?php endforeach; ?>
 
                     <div style="display: flex; justify-content: space-between; margin-top: 30px; font-size: 1.3rem; font-weight: 800; color: var(--secondary-orange);">
                         <span>Total</span>
-                        <span><?php echo number_format($res['total_price'], 0); ?> FCFA</span>
+                        <span><?php echo number_format($res['total_price'], 0); ?> <?php echo getCurrency(); ?></span>
                     </div>
                 </div>
 
@@ -359,7 +359,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['proof'])) {
                 <h3>Paiement</h3>
                 <div style="margin: 20px 0;">
                     <div style="font-size: 0.9rem; color: #666;">Montant payé :</div>
-                    <div style="font-size: 1.5rem; font-weight: 800; color: #166534;"><?php echo number_format($res['amount_paid'], 0); ?> FCFA</div>
+                    <div style="font-size: 1.5rem; font-weight: 800; color: #166534;"><?php echo number_format($res['amount_paid'], 0); ?> <?php echo getCurrency(); ?></div>
                 </div>
 
                 <?php if ($res['amount_paid'] < $res['total_price']): ?>
@@ -422,7 +422,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['proof'])) {
             });
             const result = await response.json();
             if(document.getElementById('newTotalPreview')){
-                document.getElementById('newTotalPreview').innerText = (result.total || 0).toLocaleString() + ' FCFA';
+                document.getElementById('newTotalPreview').innerText = (result.total || 0).toLocaleString() + ' <?php echo getCurrency(); ?>';
             }
         } catch(e) {
             console.error('Erreur API:', e);

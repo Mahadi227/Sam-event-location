@@ -105,7 +105,7 @@ $status_color = $status_colors[$res['status']] ?? '#9ca3af';
             <div style="color: #10b981; font-weight: 900; font-size: 1.4rem;">FACTURE SOLDÉE</div>
         <?php else: ?>
             <div style="color: #ef4444; font-weight: 900; font-size: 1.2rem;">RESTE À PAYER</div>
-            <div style="color: #ef4444; font-weight: 900; font-size: 1.4rem; margin-top: 5px;"><?php echo number_format($reste, 0); ?> FCFA</div>
+            <div style="color: #ef4444; font-weight: 900; font-size: 1.4rem; margin-top: 5px;"><?php echo number_format($reste, 0); ?> <?php echo getCurrency(); ?></div>
         <?php endif; ?>
     </div>
 </div>

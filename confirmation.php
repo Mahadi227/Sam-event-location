@@ -313,7 +313,7 @@ if (!$reservation) {
             </div>
             <div class="detail-row">
                 <span class="detail-label"><i class="fas fa-wallet"></i> Montant Total</span>
-                <span class="detail-value" style="color: var(--secondary-orange); font-size: 1.15rem;"><?php echo number_format($reservation['total_price'], 0, ',', ' '); ?> FCFA</span>
+                <span class="detail-value" style="color: var(--secondary-orange); font-size: 1.15rem;"><?php echo number_format($reservation['total_price'], 0, ',', ' '); ?> <?php echo getCurrency(); ?></span>
             </div>
             <div class="detail-row" style="align-items: center;">
                 <span class="detail-label"><i class="fas fa-info-circle"></i> Statut</span>

@@ -90,7 +90,7 @@ foreach ($allItems as $item) {
                         <p><?php echo htmlspecialchars($item['description'] ?? 'Location de ' . strtolower($item['category_name']) . ' pour tous vos événements.'); ?>
                         </p>
                         <div class="service-footer">
-                            <span class="price-tag"><?php echo number_format($item['price_per_day'], 0, ',', ' '); ?> FCFA /
+                            <span class="price-tag"><?php echo number_format($item['price_per_day'], 0, ',', ' '); ?> <?php echo getCurrency(); ?> /
                                 Jour</span>
                             <a href="booking.php?item=<?php echo $item['id']; ?>" class="btn-reserve">Réserver</a>
                         </div>

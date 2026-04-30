@@ -266,12 +266,12 @@ if ($branch_id) {
                     <hr style="margin: 20px 0; border: none; border-top: 1px dashed #eee;">
                     <div style="display: flex; justify-content: space-between; font-weight: 800; font-size: 1.4rem; color: var(--secondary-orange);">
                         <span>TOTAL</span>
-                        <span id="displayTotal">0 F</span>
+                        <span id="displayTotal">0 <?php echo getCurrency(); ?></span>
                     </div>
                     <div style="margin-top: 15px; font-size: 0.8rem; color: #666;">
                         <i class="fas fa-calendar-alt" style="margin-right: 5px;"></i> Durée: <span id="displayDuration">1 jour(s)</span><br>
                         <i class="fas fa-truck" style="margin-right: 5px;"></i> Livraison: <span id="displayDelivery">--</span><br>
-                        <i class="fas fa-tag" style="margin-right: 5px;"></i> Remise: <span id="displayDiscount">0 F</span>
+                        <i class="fas fa-tag" style="margin-right: 5px;"></i> Remise: <span id="displayDiscount">0 <?php echo getCurrency(); ?></span>
                     </div>
                 </div>
             </div>
@@ -378,7 +378,7 @@ if ($branch_id) {
                     count++;
                     html += `<div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:0.9rem;">
                             <span>${i.dataset.name} x${i.value}</span>
-                            <span>${(i.dataset.price * i.value).toLocaleString()} F</span>
+                            <span>${(i.dataset.price * i.value).toLocaleString()} <?php echo getCurrency(); ?></span>
                          </div>`;
                 }
             });

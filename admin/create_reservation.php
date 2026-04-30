@@ -137,12 +137,12 @@ while ($row = $stmt->fetch()) {
                     </div>
                     <div style="margin-top: 15px; font-size: 0.85rem; color: #666;">
                         <i class="fas fa-calendar-alt" style="margin-right: 5px;"></i> Durée: <span id="displayDuration">1 jour(s)</span><br>
-                        <i class="fas fa-truck" style="margin-right: 5px;"></i> Livraison: <span id="displayDelivery">0 F</span><br>
-                        <i class="fas fa-tag" style="margin-right: 5px;"></i> Remise: <span id="displayDiscount">0 F</span>
+                        <i class="fas fa-truck" style="margin-right: 5px;"></i> Livraison: <span id="displayDelivery">0 <?php echo getCurrency(); ?></span><br>
+                        <i class="fas fa-tag" style="margin-right: 5px;"></i> Remise: <span id="displayDiscount">0 <?php echo getCurrency(); ?></span>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin: 15px 0; font-size: 1.2rem; font-weight: 800; color: var(--secondary-orange);">
                         <span>Total</span>
-                        <span id="displayTotal">0 FCFA</span>
+                        <span id="displayTotal">0 <?php echo getCurrency(); ?></span>
                     </div>
                     <button type="submit" id="submitBtn" class="contact-btn" style="width: 100%; border: none; cursor: pointer; padding: 15px;">Enregistrer la Réservation</button>
                     <div id="successDetails" style="margin-top: 15px;"></div>
@@ -213,7 +213,7 @@ while ($row = $stmt->fetch()) {
                 count++;
                 html += `<div style="display:flex; justify-content:space-between; margin-bottom:5px;">
                             <span>${i.dataset.name} x${i.value}</span>
-                            <span>${(i.dataset.price * i.value).toLocaleString()} F</span>
+                            <span>${(i.dataset.price * i.value).toLocaleString()} <?php echo getCurrency(); ?></span>
                          </div>`;
             }
         });

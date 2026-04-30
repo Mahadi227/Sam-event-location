@@ -257,7 +257,7 @@ if (!empty($query_string_params)) $base_url = '?' . http_build_query($query_stri
                         <td style="padding: 15px;">#<?php echo $p['reservation_id']; ?></td>
                         <td style="padding: 15px;"><?php echo htmlspecialchars($p['customer_name']); ?></td>
                         <td style="padding: 15px;"><span class="method-tag"><?php echo strtoupper($p['payment_method']); ?></span></td>
-                        <td style="padding: 15px; font-weight: 700; color: #166534;"><?php echo number_format($p['amount'], 0); ?> F</td>
+                        <td style="padding: 15px; font-weight: 700; color: #166534;"><?php echo number_format($p['amount'], 0); ?> <?php echo getCurrency(); ?></td>
                         <td style="padding: 15px; font-size: 0.85rem; color: #666;"><?php echo htmlspecialchars($p['transaction_ref']); ?></td>
                         <td style="padding: 15px;">
                             <button onclick="editPayment(<?php echo htmlspecialchars(json_encode($p)); ?>)" style="background:none; border:none; color: #4338ca; cursor: pointer; margin-right: 10px;"><i class="fas fa-edit"></i></button>

@@ -292,7 +292,7 @@ $branches = $pdo->query("SELECT * FROM branches ORDER BY name")->fetchAll();
 
                     <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px solid #f1f5f9;">
                         <div>
-                            <span style="font-size: 1.2rem; font-weight: 800; color: var(--primary-blue);"><?php echo number_format($it['price_per_day'], 0); ?> F</span>
+                            <span style="font-size: 1.2rem; font-weight: 800; color: var(--primary-blue);"><?php echo number_format($it['price_per_day'], 0); ?> <?php echo getCurrency(); ?></span>
                             <span style="font-size: 0.8rem; color: #94a3b8;">/ jour</span>
                         </div>
                         <div style="background: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: 0.9rem;">
