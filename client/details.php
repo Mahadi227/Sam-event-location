@@ -161,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['proof'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Détails Réservation #<?php echo $id; ?> - Sam Event</title>
     <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/admin.css?v=2">
+    <link rel="stylesheet" href="../assets/css/admin.css?v=8">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body style="background: #f4f5f7;">
@@ -204,7 +204,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['proof'])) {
     <div class="manage-grid">
         <div class="main-details">
             <div class="card">
-                <span class="status-badge <?php echo $res['status']; ?>">Statut : <?php echo ucfirst($res['status']); ?></span>
+                <?php
+                $status_fr = [
+                    'pending' => 'En attente',
+                    'approved' => 'Approuvée',
+                    'in_preparation' => 'En préparation',
+                    'completed' => 'Terminée',
+                    'cancelled' => 'Annulée',
+                    'rejected' => 'Rejetée',
+                    'returned' => 'Retournée'
+                ];
+                $display_status = $status_fr[$res['status']] ?? ucfirst($res['status']);
+                ?>
+                <span class="status-badge <?php echo $res['status']; ?>">Statut : <?php echo $display_status; ?></span>
                 
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h3 style="margin: 0;">Articles réservés</h3>
@@ -307,7 +319,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['proof'])) {
                 <div id="viewInfo">
                     <p><strong>Date :</strong> <?php echo date('d/m/Y', strtotime($res['event_date'])); ?></p>
                     <p><strong>Durée :</strong> <?php echo htmlspecialchars($res['duration_days'] ?? 1); ?> jour(s)</p>
-                    <p><strong>Succursale :</strong> <?php echo htmlspecialchars($res['branch_name'] ?? 'Principale'); ?></p>
+                    <p><strong>Branch  :</strong> <?php echo htmlspecialchars($res['branch_name'] ?? 'Principale'); ?></p>
                     <p><strong>Lieu :</strong> <?php echo htmlspecialchars($res['event_location']); ?> <?php if($res['distance_km']) echo '(Distance : '.$res['distance_km'].' km)'; ?></p>
                     <p><strong>Client :</strong> <?php echo htmlspecialchars($res['customer_name']); ?></p>
                     <p><strong>Tel :</strong> <?php echo htmlspecialchars($res['customer_phone']); ?></p>

@@ -46,6 +46,11 @@ if (isset($_GET['delete_promo'])) {
     $msg = "Code promo supprimé !";
 }
 
+// Ensure required settings exist
+$pdo->exec("INSERT IGNORE INTO settings (setting_key, setting_value, description) VALUES 
+    ('currency', 'FCFA', 'Devise locale'),
+    ('tax_rate', '0', 'Taux de taxe (%)')");
+
 $settings = $pdo->query("SELECT * FROM settings")->fetchAll();
 $page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($page < 1) $page = 1;
@@ -188,6 +193,7 @@ if (!empty($query_string_params)) $base_url = '?' . http_build_query($query_stri
         <a href="dashboard.php"><i class="fas fa-th-large"></i> &nbsp; Dashboard</a>
         <a href="items.php"><i class="fas fa-box"></i> &nbsp; Stock & Produits</a>
         <a href="reservations.php"><i class="fas fa-calendar-check"></i> &nbsp; Réservations</a>
+        <a href="returns.php"><i class="fas fa-undo"></i> &nbsp; Retours Matériel</a>
         <a href="payments.php"><i class="fas fa-money-bill-wave"></i> &nbsp; Paiements</a>
             <a href="transfers.php"><i class="fas fa-truck-loading"></i> &nbsp; Transferts Stock</a>
         <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse</a>

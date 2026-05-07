@@ -12,6 +12,7 @@ if (!$id) die("ID Manquant");
 // Process status update
 if (isset($_POST['update_status'])) {
     $new_status = $_POST['status'];
+    
     $stmt = $pdo->prepare("UPDATE reservations SET status = ? WHERE id = ?");
     $stmt->execute([$new_status, $id]);
     
@@ -32,6 +33,8 @@ if (isset($_POST['update_status'])) {
             createNotification($res_info['user_id'], "Mise à jour du statut", $msg_map[$new_status], "alert", $id);
         }
     }
+    
+    logActivity($_SESSION['user_id'], $_SESSION['branch_id'] ?? null, 'UPDATE_RESERVATION', "Mise à jour du statut (#$id) vers $new_status.");
 }
 
 // Process items update
@@ -71,9 +74,11 @@ if (isset($_POST['update_items'])) {
     try {
         $pdo->beginTransaction();
         
+        // Remove any old items
         $stmt = $pdo->prepare("DELETE FROM reservation_items WHERE reservation_id = ?");
         $stmt->execute([$id]);
-        
+
+
         foreach ($processed_items as $item_id => $qty) {
             $stmt = $pdo->prepare("SELECT price_per_day FROM items WHERE id = ?");
             $stmt->execute([$item_id]);
@@ -87,6 +92,9 @@ if (isset($_POST['update_items'])) {
         $stmt->execute([$pricing['total'], $pricing['discount'], $pricing['promo_code_id'], $id]);
         
         $pdo->commit();
+        
+        logActivity($_SESSION['user_id'], $_SESSION['branch_id'] ?? null, 'UPDATE_RESERVATION', "Mise à jour des articles pour la réservation #$id.");
+        
         header("Location: manage.php?id=" . $id . "&success_items=1");
         exit;
         
@@ -140,6 +148,8 @@ if (isset($_POST['update_info'])) {
     $stmt = $pdo->prepare("UPDATE reservations SET customer_name = ?, customer_phone = ?, event_date = ?, event_location = ?, duration_days = ?, distance_km = ?, total_price = ?, discount_amount = ? WHERE id = ?");
     $stmt->execute([$name, $phone, $date, $location, $duration_days, $distance_km, $pricing['total'], $pricing['discount'], $id]);
     
+    logActivity($_SESSION['user_id'], $_SESSION['branch_id'] ?? null, 'UPDATE_RESERVATION', "Mise à jour des informations pour la réservation #$id.");
+    
     header("Location: manage.php?id=" . $id . "&success=1");
     exit;
 }
@@ -176,6 +186,8 @@ if (isset($_POST['record_payment'])) {
         $staff_name = $_SESSION['name'] ?? 'Reception';
         $processor_id = $_SESSION['user_id'] ?? null;
         notifyPaymentProcessed("Paiement Encaissé", "Paiement de " . number_format($amount, 0) . " F par $staff_name (Ref Réservation: #$id - " . ($resInfo['customer_name'] ?? 'Client') . ").", $id, $processor_id);
+        
+        logActivity($_SESSION['user_id'], $_SESSION['branch_id'] ?? null, 'ADD_PAYMENT', "Encaissement de $amount F pour la réservation #$id (Méthode: $method).");
         
     } catch (Exception $e) {
         $pdo->rollBack();

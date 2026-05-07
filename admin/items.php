@@ -2,9 +2,26 @@
 // admin/items.php
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
+require_once '../includes/engine.php';
 requireAdmin();
 
 $msg = '';
+
+// Maintenance Actions
+if (isset($_POST['maintenance_action'])) {
+    $item_id = $_POST['maint_item_id'];
+    $qty = (int)$_POST['maint_qty'];
+    $action = $_POST['maint_action_type']; // 'mark_damaged' or 'restore'
+    
+    try {
+        updateItemMaintenance($item_id, $qty, $action);
+        $action_text = $action === 'mark_damaged' ? 'endommagé' : 'restauré';
+        logActivity($_SESSION['user_id'], $_SESSION['branch_id'] ?? null, 'UPDATE_INVENTORY', "{$qty}x Produit #$item_id marqué comme $action_text.");
+        $msg = "Action de maintenance effectuée avec succès !";
+    } catch (Exception $e) {
+        $error = "Erreur de maintenance : " . $e->getMessage();
+    }
+}
 
 // Add/Edit Item
 if (isset($_POST['save_item'])) {
@@ -14,7 +31,15 @@ if (isset($_POST['save_item'])) {
     $price = $_POST['price'];
     $qty = $_POST['quantity'];
     $status = $_POST['status'];
-    $image_url = $_POST['existing_image'] ?? null;
+    $branch_id = $_POST['branch_id'];
+    
+    // Existing image or explicitly null if not set
+    $image_url = !empty($_POST['existing_image']) ? $_POST['existing_image'] : null;
+    
+    // If delete image checkbox is checked, force null
+    if (isset($_POST['delete_image']) && $_POST['delete_image'] == '1') {
+        $image_url = null;
+    }
 
     $upload_dir = '../uploads/items/';
     if (!is_dir($upload_dir)) {
@@ -36,19 +61,14 @@ if (isset($_POST['save_item'])) {
     }
 
     if ($id) {
-        if ($image_url !== null) {
-            $branch_id = $_POST['branch_id'];
-            $stmt = $pdo->prepare("UPDATE items SET name = ?, category_id = ?, branch_id = ?, price_per_day = ?, quantity_total = ?, status = ?, image_url = ? WHERE id = ?");
-            $stmt->execute([$name, $cat_id, $branch_id, $price, $qty, $status, $image_url, $id]);
-        } else {
-            $branch_id = $_POST['branch_id'];
-            $stmt = $pdo->prepare("UPDATE items SET name = ?, category_id = ?, branch_id = ?, price_per_day = ?, quantity_total = ?, status = ? WHERE id = ?");
-            $stmt->execute([$name, $cat_id, $branch_id, $price, $qty, $status, $id]);
-        }
+        $stmt = $pdo->prepare("UPDATE items SET name = ?, category_id = ?, branch_id = ?, price_per_day = ?, quantity_total = ?, status = ?, image_url = ? WHERE id = ?");
+        $stmt->execute([$name, $cat_id, $branch_id, $price, $qty, $status, $image_url, $id]);
+        logActivity($_SESSION['user_id'], $_SESSION['branch_id'] ?? null, 'UPDATE_INVENTORY', "Produit #$id ($name) mis à jour.");
     } else {
-        $branch_id = $_POST['branch_id'];
         $stmt = $pdo->prepare("INSERT INTO items (name, category_id, branch_id, price_per_day, quantity_total, status, image_url) VALUES (?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([$name, $cat_id, $branch_id, $price, $qty, $status, $image_url]);
+        $new_id = $pdo->lastInsertId();
+        logActivity($_SESSION['user_id'], $_SESSION['branch_id'] ?? null, 'UPDATE_INVENTORY', "Nouveau produit #$new_id ($name) ajouté.");
     }
     $msg = "Produit enregistré avec succes !";
 }
@@ -68,7 +88,7 @@ if (isset($_POST['fast_distribute']) && hasRole('super_admin')) {
         
         if ($source && $source['quantity_total'] >= $qty_to_move && $qty_to_move > 0) {
             if ($source['branch_id'] == $to_branch_id) {
-                throw new Exception("Le produit est déjà dans cette succursale.");
+                throw new Exception("Le produit est déjà dans cette branch.");
             }
             
             // Deduct
@@ -90,7 +110,9 @@ if (isset($_POST['fast_distribute']) && hasRole('super_admin')) {
             
             // Notify
             require_once '../includes/notifications.php';
-            notifyBranch($to_branch_id, "Nouvel Arrivage", "Allocation directe de {$qty_to_move}x {$source['name']} depuis une autre succursale.", "system");
+            notifyBranch($to_branch_id, "Nouvel Arrivage", "Allocation directe de {$qty_to_move}x {$source['name']} depuis une autre branch.", "system");
+            
+            logActivity($_SESSION['user_id'], $_SESSION['branch_id'] ?? null, 'UPDATE_INVENTORY', "Distribution rapide: {$qty_to_move}x {$source['name']} vers branch #$to_branch_id.");
             
             $msg = "Distribution logistique effectuée avec succès !";
         } else {
@@ -104,8 +126,16 @@ if (isset($_POST['fast_distribute']) && hasRole('super_admin')) {
 
 // Delete
 if (isset($_GET['delete'])) {
+    $del_id = $_GET['delete'];
+    $stmt_name = $pdo->prepare("SELECT name FROM items WHERE id = ?");
+    $stmt_name->execute([$del_id]);
+    $del_name = $stmt_name->fetchColumn();
+    
     $stmt = $pdo->prepare("DELETE FROM items WHERE id = ?");
-    $stmt->execute([$_GET['delete']]);
+    $stmt->execute([$del_id]);
+    
+    logActivity($_SESSION['user_id'], $_SESSION['branch_id'] ?? null, 'UPDATE_INVENTORY', "Produit #$del_id ($del_name) supprimé.");
+    
     header("Location: items.php");
     exit;
 }
@@ -147,6 +177,12 @@ $total_pages = ceil($total_records / $limit);
 $items = $pdo->prepare("SELECT i.*, c.name as cat_name, b.name as branch_name FROM items i JOIN categories c ON i.category_id = c.id LEFT JOIN branches b ON i.branch_id = b.id $whereClause ORDER BY c.name, i.name LIMIT $limit OFFSET $offset");
 $items->execute($params);
 $items = $items->fetchAll();
+// Inject dynamic daily availability for the UI snapshot
+foreach ($items as &$it) {
+    $it['quantity_reserved'] = getTodayReservedStock($it['id']);
+    $it['quantity_available'] = getAvailableStock($it['id'], date('Y-m-d'));
+}
+unset($it);
 $query_string_params = $_GET;
 unset($query_string_params['page']);
 $base_url = '?';
@@ -179,14 +215,16 @@ $branches = $pdo->query("SELECT * FROM branches ORDER BY name")->fetchAll();
         <a href="dashboard.php"><i class="fas fa-th-large"></i> &nbsp; Dashboard</a>
         <a href="items.php" class="active"><i class="fas fa-box"></i> &nbsp; Stock & Produits</a>
         <a href="reservations.php"><i class="fas fa-calendar-check"></i> &nbsp; Reservations</a>
+        <a href="returns.php"><i class="fas fa-undo"></i> &nbsp; Retours Matériel</a>
         <a href="payments.php"><i class="fas fa-money-bill-wave"></i> &nbsp; Paiements</a>
             <a href="transfers.php"><i class="fas fa-truck-loading"></i> &nbsp; Transferts Stock</a>
         <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse</a>
         <?php if (hasRole('super_admin')): ?>
-            <a href="branches.php"><i class="fas fa-building"></i> &nbsp; Succursales</a>
+            <a href="branches.php"><i class="fas fa-building"></i> &nbsp; branchs</a>
         <?php endif; ?>
         <?php if (hasRole('super_admin') || hasRole('mini_admin')): ?>
             <a href="users.php"><i class="fas fa-users-cog"></i> &nbsp; <?php echo hasRole('super_admin') ? 'Utilisateurs' : 'Personnel'; ?></a>
+            <a href="logs.php"><i class="fas fa-history"></i> &nbsp; Journal d'Activité</a>
         <?php endif; ?>
         <?php if (hasRole('super_admin')): ?>
             <a href="settings.php"><i class="fas fa-tools"></i> &nbsp; Paramètres</a>
@@ -228,7 +266,7 @@ $branches = $pdo->query("SELECT * FROM branches ORDER BY name")->fetchAll();
             </div>
             <?php if (hasRole('super_admin')): ?>
             <div class="form-group" style="width: 180px;">
-                <label style="font-size: 0.85rem; font-weight: 700; color: #666;">Succursale</label>
+                <label style="font-size: 0.85rem; font-weight: 700; color: #666;">Branch</label>
                 <select name="branch" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
                     <option value="">Toutes</option>
                     <?php foreach ($branches as $b): ?>
@@ -287,16 +325,33 @@ $branches = $pdo->query("SELECT * FROM branches ORDER BY name")->fetchAll();
                     
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px; font-size: 0.9rem; color: #64748b;">
                         <i class="fas fa-map-marker-alt" style="color: #94a3b8;"></i>
-                        <?php echo htmlspecialchars($it['branch_name'] ?? 'Toutes Succursales'); ?>
+                        <?php echo htmlspecialchars($it['branch_name'] ?? 'Toutes branchs'); ?>
                     </div>
 
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px solid #f1f5f9;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px solid #f1f5f9; margin-bottom: 10px;">
                         <div>
                             <span style="font-size: 1.2rem; font-weight: 800; color: var(--primary-blue);"><?php echo number_format($it['price_per_day'], 0); ?> <?php echo getCurrency(); ?></span>
                             <span style="font-size: 0.8rem; color: #94a3b8;">/ jour</span>
                         </div>
-                        <div style="background: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: 0.9rem;">
-                            <i class="fas fa-boxes"></i> <?php echo $it['quantity_total']; ?>
+                        <div style="text-align: right;">
+                            <div style="background: <?php echo $it['quantity_available'] < 5 ? '#fee2e2' : '#e0e7ff'; ?>; color: <?php echo $it['quantity_available'] < 5 ? '#ef4444' : '#4338ca'; ?>; padding: 4px 10px; border-radius: 8px; font-weight: 800; font-size: 1rem;">
+                                <i class="fas fa-check-circle"></i> <?php echo $it['quantity_available']; ?> Dispo (Auj.)
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; font-size: 0.8rem; text-align: center;">
+                        <div style="background: #f1f5f9; padding: 5px; border-radius: 5px; color: #475569;">
+                            <div style="font-weight: bold;"><?php echo $it['quantity_total']; ?></div>
+                            <div style="font-size: 0.7rem;">Total</div>
+                        </div>
+                        <div style="background: #fffbeb; padding: 5px; border-radius: 5px; color: #d97706;">
+                            <div style="font-weight: bold;"><?php echo $it['quantity_reserved']; ?></div>
+                            <div style="font-size: 0.7rem;">Réservé (Auj.)</div>
+                        </div>
+                        <div style="background: #fef2f2; padding: 5px; border-radius: 5px; color: #ef4444;">
+                            <div style="font-weight: bold;"><?php echo $it['quantity_maintenance']; ?></div>
+                            <div style="font-size: 0.7rem;">Maint.</div>
                         </div>
                     </div>
                 </div>
@@ -312,6 +367,10 @@ $branches = $pdo->query("SELECT * FROM branches ORDER BY name")->fetchAll();
                         <i class="fas fa-truck-fast"></i>
                     </button>
                     <?php endif; ?>
+                    
+                    <button onclick="maintenanceItem(<?php echo htmlspecialchars(json_encode($it)); ?>)" type="button" title="Gérer Maintenance" style="width: 45px; height: 45px; border-radius: 50%; background: #fef2f2; color: #ef4444; border: none; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='none'">
+                        <i class="fas fa-tools"></i>
+                    </button>
                     
                     <!-- Super Admin Only: Delete -->
                     <a href="?delete=<?php echo $it['id']; ?>" onclick="return confirm('Confirmer la suppression ?')" style="width: 45px; height: 45px; border-radius: 50%; background: #ef4444; color: white; border: none; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-decoration: none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='none'">
@@ -342,7 +401,7 @@ $branches = $pdo->query("SELECT * FROM branches ORDER BY name")->fetchAll();
 <div id="distributeModal" style="display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index: 2000;">
     <div style="background: white; padding: 30px; border-radius: 20px; width: 500px; max-width: 90%; position: relative;">
         <h3 style="margin-top:0; color: #d97706;"><i class="fas fa-truck-fast"></i> Partage de Stock Immédiat</h3>
-        <p style="color:#666; font-size: 0.9rem; margin-bottom: 20px;">Détachez une partie du stock de <strong id="dist_item_name_display"></strong> vers une autre succursale. (Max: <span id="dist_max_qty_display"></span>)</p>
+        <p style="color:#666; font-size: 0.9rem; margin-bottom: 20px;">Détachez une partie du stock de <strong id="dist_item_name_display"></strong> vers une autre branch. (Max: <span id="dist_max_qty_display"></span>)</p>
         
         <button onclick="this.parentElement.parentElement.style.display='none'" style="position: absolute; top: 20px; right: 20px; background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
         
@@ -368,6 +427,35 @@ $branches = $pdo->query("SELECT * FROM branches ORDER BY name")->fetchAll();
     </div>
 </div>
 
+<!-- Maintenance Modal -->
+<div id="maintenanceModal" style="display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index: 2000;">
+    <div style="background: white; padding: 30px; border-radius: 20px; width: 500px; max-width: 90%; position: relative;">
+        <h3 style="margin-top:0; color: #ef4444;"><i class="fas fa-tools"></i> Gestion Maintenance</h3>
+        <p style="color:#666; font-size: 0.9rem; margin-bottom: 20px;">Produit : <strong id="maint_item_name_display"></strong></p>
+        
+        <button onclick="this.parentElement.parentElement.style.display='none'" style="position: absolute; top: 20px; right: 20px; background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        
+        <form method="POST" style="margin-top: 10px;">
+            <input type="hidden" name="maint_item_id" id="maint_item_id">
+            
+            <div class="form-group">
+                <label>Action</label>
+                <select name="maint_action_type" required class="form-control" style="width:100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 15px;">
+                    <option value="mark_damaged">Signaler comme endommagé</option>
+                    <option value="restore">Restaurer (Réparé)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Quantité</label>
+                <input type="number" name="maint_qty" id="maint_qty" required min="1" class="form-control" style="width:100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 25px;">
+            </div>
+            
+            <button type="submit" name="maintenance_action" class="contact-btn" style="width:100%; border:none; padding:15px; cursor: pointer; background: #ef4444;">Confirmer</button>
+        </form>
+    </div>
+</div>
+
 <!-- Modal Form -->
 <div id="itemModal" style="display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index: 2000;">
     <div style="background: white; padding: 30px; border-radius: 20px; width: 500px; max-width: 90%; position: relative; max-height: 90vh; overflow-y: auto;">
@@ -382,11 +470,16 @@ $branches = $pdo->query("SELECT * FROM branches ORDER BY name")->fetchAll();
                 <input type="file" name="image" id="item_image" class="form-control" accept="image/*" style="width:100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 15px;">
                 <div id="current_image_preview" style="margin-bottom: 15px; display: none;">
                     <img src="" id="preview_img" style="max-height: 100px; border-radius: 8px;">
+                    <br>
+                    <label style="display:inline-flex; align-items:center; cursor:pointer; color:#ef4444; margin-top:10px;">
+                        <input type="checkbox" name="delete_image" id="delete_image" value="1" style="margin-right:5px;">
+                        <span style="font-size: 0.9rem; font-weight: bold;">Supprimer l'image actuelle</span>
+                    </label>
                 </div>
             </div>
             <?php if (hasRole('super_admin')): ?>
             <div class="form-group">
-                <label>Assigner à la Succursale</label>
+                <label>Assigner à la branch</label>
                 <select name="branch_id" id="item_branch" required class="form-control" style="width:100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 15px;">
                     <?php foreach ($branches as $b): ?>
                         <option value="<?php echo $b['id']; ?>"><?php echo htmlspecialchars($b['name']); ?></option>
@@ -451,6 +544,7 @@ function newItem() {
     
     document.getElementById('current_image_preview').style.display = 'none';
     document.getElementById('item_image').value = '';
+    document.getElementById('delete_image').checked = false;
     
     document.getElementById('itemModal').style.display = 'flex';
 }
@@ -478,17 +572,26 @@ function editItem(item) {
         document.getElementById('current_image_preview').style.display = 'none';
     }
     document.getElementById('item_image').value = '';
+    document.getElementById('delete_image').checked = false;
 
     document.getElementById('itemModal').style.display = 'flex';
 }
 function distributeItem(item) {
     document.getElementById('dist_item_id').value = item.id;
     document.getElementById('dist_item_name_display').innerText = item.name;
-    document.getElementById('dist_max_qty_display').innerText = item.quantity_total;
-    document.getElementById('dist_qty').max = item.quantity_total;
+    document.getElementById('dist_max_qty_display').innerText = item.quantity_available;
+    document.getElementById('dist_qty').max = item.quantity_available;
     document.getElementById('dist_qty').value = '';
     
     document.getElementById('distributeModal').style.display = 'flex';
+}
+
+function maintenanceItem(item) {
+    document.getElementById('maint_item_id').value = item.id;
+    document.getElementById('maint_item_name_display').innerText = item.name;
+    document.getElementById('maint_qty').value = '';
+    
+    document.getElementById('maintenanceModal').style.display = 'flex';
 }
 </script>
 

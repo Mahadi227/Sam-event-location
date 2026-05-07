@@ -70,8 +70,9 @@
     padding: 15px 20px;
     justify-content: space-between;
     align-items: center;
-    position: sticky;
-    top: 0;
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
     z-index: 1002;
 }
 
@@ -156,6 +157,11 @@
 .rejected {
     background: #fee2e2;
     color: #991b1b;
+}
+
+.returned {
+    background: #e0e7ff;
+    color: #3730a3;
 }
 
 /* Walk-in Grid */
@@ -439,4 +445,4 @@
         max-height: calc(100vh - 90px);
         box-shadow: 0 15px 40px rgba(0,0,0,0.2);
     }
-}
+}

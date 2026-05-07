@@ -4,8 +4,23 @@ require_once '../includes/db.php';
 require_once '../includes/auth.php';
 requireAdmin();
 
-// Get items
-$stmt = $pdo->query("SELECT c.name as cat_name, i.* FROM items i JOIN categories c ON i.category_id = c.id WHERE i.status = 'available'");
+$branch_id = getActiveBranch();
+if (hasRole('super_admin') && isset($_GET['branch_id'])) {
+    $branch_id = $_GET['branch_id'];
+}
+if (!$branch_id) {
+    $first_branch = $pdo->query("SELECT id FROM branches ORDER BY name LIMIT 1")->fetchColumn();
+    $branch_id = $first_branch ?: 1;
+}
+
+$branches = [];
+if (hasRole('super_admin')) {
+    $branches = $pdo->query("SELECT * FROM branches ORDER BY name")->fetchAll();
+}
+
+// Get items for the selected branch
+$stmt = $pdo->prepare("SELECT c.name as cat_name, i.* FROM items i JOIN categories c ON i.category_id = c.id WHERE i.status = 'available' AND i.branch_id = ?");
+$stmt->execute([$branch_id]);
 $items = [];
 while ($row = $stmt->fetch()) {
     $items[$row['cat_name']][] = $row;
@@ -35,14 +50,16 @@ while ($row = $stmt->fetch()) {
         <a href="dashboard.php"><i class="fas fa-th-large"></i> &nbsp; Dashboard</a>
         <a href="items.php"><i class="fas fa-box"></i> &nbsp; Stock & Produits</a>
         <a href="reservations.php" class="active"><i class="fas fa-calendar-check"></i> &nbsp; Réservations</a>
+        <a href="returns.php"><i class="fas fa-undo"></i> &nbsp; Retours Matériel</a>
         <a href="payments.php"><i class="fas fa-money-bill-wave"></i> &nbsp; Paiements</a>
             <a href="transfers.php"><i class="fas fa-truck-loading"></i> &nbsp; Transferts Stock</a>
         <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse</a>
         <?php if (hasRole('super_admin')): ?>
-            <a href="branches.php"><i class="fas fa-building"></i> &nbsp; Succursales</a>
+            <a href="branches.php"><i class="fas fa-building"></i> &nbsp; Branches</a>
         <?php endif; ?>
         <?php if (hasRole('super_admin') || hasRole('mini_admin')): ?>
             <a href="users.php"><i class="fas fa-users-cog"></i> &nbsp; <?php echo hasRole('super_admin') ? 'Utilisateurs' : 'Personnel'; ?></a>
+            <a href="logs.php"><i class="fas fa-history"></i> &nbsp; Journal d'Activité</a>
         <?php endif; ?>
         <?php if (hasRole('super_admin')): ?>
             <a href="settings.php"><i class="fas fa-tools"></i> &nbsp; Paramètres</a>
@@ -53,7 +70,21 @@ while ($row = $stmt->fetch()) {
     <div class="main-content">
         <h2>Nouvelle Réservation</h2>
 
+        <?php if (hasRole('super_admin')): ?>
+            <div style="margin-bottom: 20px;">
+                <label><strong>Sélectionner la branch :</strong></label>
+                <select onchange="window.location.href='?branch_id='+this.value" class="form-control" style="width: 250px; padding: 10px; border-radius: 8px; border: 1px solid #ddd; margin-left: 10px;">
+                    <?php foreach ($branches as $b): ?>
+                        <option value="<?php echo $b['id']; ?>" <?php echo $branch_id == $b['id'] ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($b['name']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        <?php endif; ?>
+
     <form id="walkinForm" action="../process_booking_ai.php" method="POST">
+        <input type="hidden" name="branch_id" value="<?php echo $branch_id; ?>">
         <div class="walkin-grid" style="margin-top: 20px;">
             <div class="main-form">
                 <div class="card">
@@ -138,7 +169,8 @@ while ($row = $stmt->fetch()) {
                     <div style="margin-top: 15px; font-size: 0.85rem; color: #666;">
                         <i class="fas fa-calendar-alt" style="margin-right: 5px;"></i> Durée: <span id="displayDuration">1 jour(s)</span><br>
                         <i class="fas fa-truck" style="margin-right: 5px;"></i> Livraison: <span id="displayDelivery">0 <?php echo getCurrency(); ?></span><br>
-                        <i class="fas fa-tag" style="margin-right: 5px;"></i> Remise: <span id="displayDiscount">0 <?php echo getCurrency(); ?></span>
+                        <i class="fas fa-tag" style="margin-right: 5px;"></i> Remise: <span id="displayDiscount">0 <?php echo getCurrency(); ?></span><br>
+                        <i class="fas fa-file-invoice-dollar" style="margin-right: 5px;"></i> Taxe: <span id="displayTax" style="display:none;">0 <?php echo getCurrency(); ?></span>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin: 15px 0; font-size: 1.2rem; font-weight: 800; color: var(--secondary-orange);">
                         <span>Total</span>
@@ -200,6 +232,16 @@ while ($row = $stmt->fetch()) {
             discSpan.innerText = '0 F';
             discSpan.style.color = 'inherit';
             discSpan.style.fontWeight = 'normal';
+        }
+
+        const taxSpan = document.getElementById('displayTax');
+        if (result.tax && result.tax > 0) {
+            taxSpan.style.display = 'inline';
+            taxSpan.innerText = '+ ' + result.tax.toLocaleString() + ' F';
+            taxSpan.style.color = '#ef4444'; // red-ish
+            taxSpan.style.fontWeight = 'bold';
+        } else {
+            taxSpan.style.display = 'none';
         }
 
         updateSummaryItems(items);

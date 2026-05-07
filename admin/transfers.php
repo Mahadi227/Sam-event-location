@@ -11,61 +11,114 @@ $isGlobalView = (empty($current_branch_id) || $current_branch_id == 'all');
 $msg = '';
 $error = '';
 
-// Handle Approval/Rejection
-if (isset($_GET['action']) && isset($_GET['id'])) {
-    $tid = $_GET['id'];
-    $act = $_GET['action'];
-    
-    $t_stmt = $pdo->prepare("SELECT t.*, i.name as item_name, i.price_per_day, i.category_id, i.image_url FROM stock_transfers t JOIN items i ON t.item_id_from = i.id WHERE t.id = ? AND t.status = 'pending'");
-    $t_stmt->execute([$tid]);
-    $transfer = $t_stmt->fetch();
-    
-    if ($transfer) {
-        $can_manage = hasRole('super_admin') || $transfer['from_branch_id'] == $current_branch_id;
-        if ($can_manage) {
-            if ($act === 'approve') {
-            $pdo->beginTransaction();
-            try {
-                // Deduct from source
-                $pdo->prepare("UPDATE items SET quantity_total = quantity_total - ? WHERE id = ?")->execute([$transfer['quantity'], $transfer['item_id_from']]);
-                
-                // Add to destination
-                $check_dest = $pdo->prepare("SELECT id FROM items WHERE name = ? AND branch_id = ?");
-                $check_dest->execute([$transfer['item_name'], $transfer['to_branch_id']]);
-                $dest_item_id = $check_dest->fetchColumn();
-                
-                if ($dest_item_id) {
-                    $pdo->prepare("UPDATE items SET quantity_total = quantity_total + ? WHERE id = ?")->execute([$transfer['quantity'], $dest_item_id]);
-                } else {
-                    // Clone item
-                    $pdo->prepare("INSERT INTO items (name, price_per_day, quantity_total, category_id, branch_id, image_url) VALUES (?, ?, ?, ?, ?, ?)")
-                        ->execute([$transfer['item_name'], $transfer['price_per_day'], $transfer['quantity'], $transfer['category_id'], $transfer['to_branch_id'], $transfer['image_url']]);
-                }
-                
-                // Update transfer record
-                $pdo->prepare("UPDATE stock_transfers SET status = 'approved', processed_by = ? WHERE id = ?")->execute([$_SESSION['user_id'], $tid]);
-                
-                $pdo->commit();
-                
-                require_once '../includes/notifications.php';
-                notifyBranch($transfer['to_branch_id'], "Nouveau Stock Reçu", "Transfert de {$transfer['quantity']}x {$transfer['item_name']} approuvé et ajouté à votre inventaire.", "system");
-                notifyBranch($transfer['from_branch_id'], "Transfert Expédié", "Vos {$transfer['quantity']}x {$transfer['item_name']} ont été expédiés.", "system");
-                
-                $msg = "Transfert approuvé avec succès !";
-            } catch (Exception $e) {
-                $pdo->rollBack();
-                $error = "Erreur lors de l'approbation : " . $e->getMessage();
+// Handle AJAX CRUD Operations
+$is_ajax = (!empty($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) || (isset($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'application/json') !== false);
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_ajax) {
+    $input = json_decode(file_get_contents('php://input'), true);
+    if ($input && isset($input['ajax_action'])) {
+        header('Content-Type: application/json');
+        $act = $input['ajax_action'];
+        $tid = $input['id'] ?? null;
+        
+        $t_stmt = $pdo->prepare("SELECT t.*, i.name as item_name, i.price_per_day, i.category_id, i.image_url FROM stock_transfers t JOIN items i ON t.item_id_from = i.id WHERE t.id = ?");
+        $t_stmt->execute([$tid]);
+        $transfer = $t_stmt->fetch();
+        
+        if ($transfer) {
+            $can_manage = hasRole('super_admin') || $transfer['from_branch_id'] == $current_branch_id;
+            $can_edit = hasRole('super_admin') || $transfer['requested_by'] == $_SESSION['user_id'] || $transfer['to_branch_id'] == $current_branch_id;
+            
+            if ($transfer['status'] !== 'pending') {
+                echo json_encode(['success' => false, 'error' => 'Ce transfert a déjà été traité.']);
+                exit;
             }
-        } elseif ($act === 'reject') {
-            $pdo->prepare("UPDATE stock_transfers SET status = 'rejected', processed_by = ? WHERE id = ?")->execute([$_SESSION['user_id'], $tid]);
+
+            if ($act === 'delete') {
+                if ($can_edit) {
+                    $pdo->prepare("DELETE FROM stock_transfers WHERE id = ?")->execute([$tid]);
+                    echo json_encode(['success' => true, 'msg' => 'Transfert supprimé avec succès.']);
+                    exit;
+                } else {
+                    echo json_encode(['success' => false, 'error' => 'Non autorisé à supprimer.']);
+                    exit;
+                }
+            }
             
-            require_once '../includes/notifications.php';
-            notifyBranch($transfer['from_branch_id'], "Transfert Rejeté", "Votre demande de transfert pour {$transfer['quantity']}x {$transfer['item_name']} a été refusée.", "system");
-            
-            $msg = "Transfert rejeté.";
-        }
+            if ($act === 'edit') {
+                if ($can_edit) {
+                    $new_qty = (int)($input['quantity'] ?? 0);
+                    if ($new_qty > 0) {
+                        $pdo->prepare("UPDATE stock_transfers SET quantity = ? WHERE id = ?")->execute([$new_qty, $tid]);
+                        echo json_encode(['success' => true, 'msg' => 'Quantité mise à jour.', 'new_qty' => $new_qty]);
+                        exit;
+                    } else {
+                        echo json_encode(['success' => false, 'error' => 'Quantité invalide.']);
+                        exit;
+                    }
+                } else {
+                    echo json_encode(['success' => false, 'error' => 'Non autorisé à modifier.']);
+                    exit;
+                }
+            }
+
+            if ($can_manage) {
+                if ($act === 'approve') {
+                    $pdo->beginTransaction();
+                    try {
+                        // Check stock again
+                        $check_stock = $pdo->prepare("SELECT quantity_total FROM items WHERE id = ?");
+                        $check_stock->execute([$transfer['item_id_from']]);
+                        $current_stock = $check_stock->fetchColumn();
+                        if ($current_stock < $transfer['quantity']) {
+                            throw new Exception("Stock insuffisant dans la succursale d'origine.");
+                        }
+
+                        $pdo->prepare("UPDATE items SET quantity_total = quantity_total - ? WHERE id = ?")->execute([$transfer['quantity'], $transfer['item_id_from']]);
+                        
+                        $check_dest = $pdo->prepare("SELECT id FROM items WHERE name = ? AND branch_id = ?");
+                        $check_dest->execute([$transfer['item_name'], $transfer['to_branch_id']]);
+                        $dest_item_id = $check_dest->fetchColumn();
+                        
+                        if ($dest_item_id) {
+                            $pdo->prepare("UPDATE items SET quantity_total = quantity_total + ? WHERE id = ?")->execute([$transfer['quantity'], $dest_item_id]);
+                        } else {
+                            $pdo->prepare("INSERT INTO items (name, price_per_day, quantity_total, category_id, branch_id, image_url) VALUES (?, ?, ?, ?, ?, ?)")
+                                ->execute([$transfer['item_name'], $transfer['price_per_day'], $transfer['quantity'], $transfer['category_id'], $transfer['to_branch_id'], $transfer['image_url']]);
+                        }
+                        
+                        $pdo->prepare("UPDATE stock_transfers SET status = 'approved', processed_by = ? WHERE id = ?")->execute([$_SESSION['user_id'], $tid]);
+                        $pdo->commit();
+                        
+                        require_once '../includes/notifications.php';
+                        notifyBranch($transfer['to_branch_id'], "Nouveau Stock Reçu", "Transfert de {$transfer['quantity']}x {$transfer['item_name']} approuvé et ajouté à votre inventaire.", "system");
+                        notifyBranch($transfer['from_branch_id'], "Transfert Expédié", "Vos {$transfer['quantity']}x {$transfer['item_name']} ont été expédiés.", "system");
+                        
+                        logActivity($_SESSION['user_id'], $_SESSION['branch_id'] ?? null, 'STOCK_TRANSFER', "Transfert #$tid approuvé.");
+                        
+                        echo json_encode(['success' => true, 'msg' => 'Transfert approuvé avec succès.', 'new_status' => 'approved']);
+                        exit;
+                    } catch (Exception $e) {
+                        $pdo->rollBack();
+                        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                        exit;
+                    }
+                    $pdo->prepare("UPDATE stock_transfers SET status = 'rejected', processed_by = ? WHERE id = ?")->execute([$_SESSION['user_id'], $tid]);
+                    require_once '../includes/notifications.php';
+                    notifyBranch($transfer['from_branch_id'], "Transfert Rejeté", "Votre demande de transfert pour {$transfer['quantity']}x {$transfer['item_name']} a été refusée.", "system");
+                    
+                    logActivity($_SESSION['user_id'], $_SESSION['branch_id'] ?? null, 'STOCK_TRANSFER', "Transfert #$tid rejeté.");
+                    
+                    echo json_encode(['success' => true, 'msg' => 'Transfert rejeté.', 'new_status' => 'rejected']);
+                    exit;
+                }
+            } else {
+                echo json_encode(['success' => false, 'error' => 'Accès refusé pour valider ce transfert.']);
+                exit;
+            }
         } else {
-            $error = "Accès refusé. Seule l'agence expéditrice ou un Super Admin peut valider.";
+            echo json_encode(['success' => false, 'error' => 'Transfert introuvable.']);
+            exit;
         }
     }
 }
@@ -91,6 +144,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_transfer'])) {
             
             require_once '../includes/notifications.php';
             notifyBranch(null, "Demande de Transfert", "Une demande de transfert de $qty " . $item_info['name'] . " est en attente d'approbation.", "system"); // notifies super admins
+            
+            logActivity($_SESSION['user_id'], $_SESSION['branch_id'] ?? null, 'STOCK_TRANSFER', "Demande d'expédition de $qty {$item_info['name']} créée.");
             
         } else {
             $error = "Quantité invalide ou stock insuffisant.";
@@ -120,6 +175,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_transfer'])) 
                 
                 require_once '../includes/notifications.php';
                 notifyBranch(null, "Demande de Stock", "Une agence a demandé $qty " . $item_info['name'] . " depuis une autre succursale.", "system");
+                
+                logActivity($_SESSION['user_id'], $_SESSION['branch_id'] ?? null, 'STOCK_TRANSFER', "Demande de réception de $qty {$item_info['name']} envoyée.");
             } else {
                 $error = "Quantité invalide ou stock insuffisant dans l'agence source.";
             }
@@ -175,6 +232,7 @@ if (!$isGlobalView) {
         <?php if (hasRole('super_admin')): ?><a href="analytics.php"><i class="fas fa-chart-pie"></i> &nbsp; Analytiques</a><?php endif; ?>
         <a href="items.php"><i class="fas fa-box"></i> &nbsp; Stock & Produits</a>
         <a href="reservations.php"><i class="fas fa-calendar-check"></i> &nbsp; Réservations</a>
+        <a href="returns.php"><i class="fas fa-undo"></i> &nbsp; Retours Matériel</a>
         <a href="payments.php"><i class="fas fa-money-bill-wave"></i> &nbsp; Paiements</a>
         <a href="transfers.php" class="active"><i class="fas fa-truck-loading"></i> &nbsp; Transferts Stock</a>
         <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse</a>
@@ -183,6 +241,7 @@ if (!$isGlobalView) {
         <?php endif; ?>
         <?php if (hasRole('super_admin') || hasRole('mini_admin')): ?>
             <a href="users.php"><i class="fas fa-users-cog"></i> &nbsp; <?php echo hasRole('super_admin') ? 'Utilisateurs' : 'Personnel'; ?></a>
+            <a href="logs.php"><i class="fas fa-history"></i> &nbsp; Journal d'Activité</a>
         <?php endif; ?>
         <?php if (hasRole('super_admin')): ?>
             <a href="settings.php"><i class="fas fa-tools"></i> &nbsp; Paramètres</a>
@@ -233,18 +292,18 @@ if (!$isGlobalView) {
                     </thead>
                     <tbody>
                         <?php foreach ($transfers as $t): ?>
-                        <tr style="border-bottom: 1px solid #f9f9f9;">
+                        <tr id="row_<?php echo $t['id']; ?>" style="border-bottom: 1px solid #f9f9f9;">
                             <td style="padding: 15px; font-size: 0.9rem; color:#64748b;"><?php echo date('d/m/y H:i', strtotime($t['created_at'])); ?></td>
                             <td style="padding: 15px;">
                                 <strong><?php echo htmlspecialchars($t['item_name']); ?></strong><br>
-                                <span style="background: #f1f5f9; padding: 2px 6px; border-radius:4px; font-size:0.8rem;">Qté: <?php echo $t['quantity']; ?></span>
+                                <span id="qty_<?php echo $t['id']; ?>" style="background: #f1f5f9; padding: 2px 6px; border-radius:4px; font-size:0.8rem;">Qté: <?php echo $t['quantity']; ?></span>
                             </td>
                             <td style="padding: 15px; font-size: 0.9rem;">
                                 De: <span style="font-weight:600; color:#ef4444;"><?php echo htmlspecialchars($t['from_name']); ?></span> <br>
                                 Vers: <span style="font-weight:600; color:#10b981;"><?php echo htmlspecialchars($t['to_name']); ?></span>
                             </td>
                             <td style="padding: 15px; font-size:0.9rem;"><?php echo htmlspecialchars($t['requestor'] ?? 'Système'); ?></td>
-                            <td style="padding: 15px;">
+                            <td id="status_<?php echo $t['id']; ?>" style="padding: 15px;">
                                 <?php if ($t['status'] == 'approved'): ?>
                                     <span style="background: #dcfce7; color: #166534; padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;">Approuvé</span>
                                 <?php elseif ($t['status'] == 'rejected'): ?>
@@ -253,10 +312,18 @@ if (!$isGlobalView) {
                                     <span style="background: #fef9c3; color: #854d0e; padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;">En attente</span>
                                 <?php endif; ?>
                             </td>
-                            <td style="padding: 15px;">
-                                <?php if ($t['status'] == 'pending' && (hasRole('super_admin') || $t['from_branch_id'] == $current_branch_id)): ?>
-                                    <a href="?action=approve&id=<?php echo $t['id']; ?>" class="action-btn edit-btn" title="Approuver" onclick="return confirm('Confirmer le mouvement de stock ?')"><i class="fas fa-check"></i></a>
-                                    <a href="?action=reject&id=<?php echo $t['id']; ?>" class="action-btn delete-btn" title="Rejeter" onclick="return confirm('Rejeter ce transfert ?')"><i class="fas fa-times"></i></a>
+                            <td id="actions_<?php echo $t['id']; ?>" style="padding: 15px;">
+                                <?php if ($t['status'] == 'pending'): ?>
+                                    <div style="display: flex; gap: 5px;">
+                                    <?php if (hasRole('super_admin') || $t['from_branch_id'] == $current_branch_id): ?>
+                                        <button onclick="performAction(<?php echo $t['id']; ?>, 'approve')" class="action-btn edit-btn" style="border:none; cursor:pointer;" title="Approuver"><i class="fas fa-check"></i></button>
+                                        <button onclick="performAction(<?php echo $t['id']; ?>, 'reject')" class="action-btn delete-btn" style="border:none; cursor:pointer;" title="Rejeter"><i class="fas fa-times"></i></button>
+                                    <?php endif; ?>
+                                    <?php if (hasRole('super_admin') || $t['to_branch_id'] == $current_branch_id || $t['requested_by'] == $_SESSION['user_id']): ?>
+                                        <button onclick="editQuantity(<?php echo $t['id']; ?>, <?php echo $t['quantity']; ?>)" class="action-btn view-btn" style="background:#e0e7ff; color:#4338ca; border:none; cursor:pointer;" title="Modifier Quantité"><i class="fas fa-edit"></i></button>
+                                        <button onclick="performAction(<?php echo $t['id']; ?>, 'delete')" class="action-btn delete-btn" style="background:#fee2e2; color:#ef4444; border:none; cursor:pointer;" title="Supprimer Demande"><i class="fas fa-trash"></i></button>
+                                    <?php endif; ?>
+                                    </div>
                                 <?php else: ?>
                                     <span style="color:#cbd5e1;"><i class="fas fa-lock"></i></span>
                                 <?php endif; ?>
@@ -346,5 +413,90 @@ if (!$isGlobalView) {
 <?php endif; ?>
 
 <script src="../assets/js/admin.js?v=9"></script>
+<script>
+async function performAction(id, action) {
+    let confirmMsg = '';
+    if (action === 'approve') confirmMsg = 'Confirmer le mouvement de stock ?';
+    else if (action === 'reject') confirmMsg = 'Rejeter ce transfert ?';
+    else if (action === 'delete') confirmMsg = 'Supprimer définitivement cette demande ?';
+
+    if (!confirm(confirmMsg)) return;
+
+    try {
+        const res = await fetch('transfers.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ ajax_action: action, id: id })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            // Update UI dynamically
+            if (action === 'delete') {
+                const row = document.getElementById('row_' + id);
+                if (row) row.remove();
+            } else if (action === 'approve' || action === 'reject') {
+                const statusCell = document.getElementById('status_' + id);
+                if (action === 'approve') {
+                    statusCell.innerHTML = '<span style="background: #dcfce7; color: #166534; padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;">Approuvé</span>';
+                } else {
+                    statusCell.innerHTML = '<span style="background: #fee2e2; color: #991b1b; padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;">Rejeté</span>';
+                }
+                const actionsCell = document.getElementById('actions_' + id);
+                actionsCell.innerHTML = '<span style="color:#cbd5e1;"><i class="fas fa-lock"></i></span>';
+            }
+            alert(data.msg);
+        } else {
+            alert('Erreur: ' + data.error);
+        }
+    } catch (err) {
+        alert('Erreur de réseau.');
+        console.error(err);
+    }
+}
+
+async function editQuantity(id, currentQty) {
+    const newQtyStr = prompt("Entrez la nouvelle quantité :", currentQty);
+    if (newQtyStr === null) return;
+    
+    const newQty = parseInt(newQtyStr);
+    if (isNaN(newQty) || newQty <= 0) {
+        alert("Quantité invalide.");
+        return;
+    }
+    
+    if (newQty === currentQty) return;
+
+    try {
+        const res = await fetch('transfers.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ ajax_action: 'edit', id: id, quantity: newQty })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            document.getElementById('qty_' + id).innerText = 'Qté: ' + data.new_qty;
+            // Update the button's onclick to reflect new current quantity
+            const actionsCell = document.getElementById('actions_' + id);
+            const viewBtn = actionsCell.querySelector('.view-btn');
+            if (viewBtn) {
+                viewBtn.setAttribute('onclick', `editQuantity(${id}, ${data.new_qty})`);
+            }
+        } else {
+            alert('Erreur: ' + data.error);
+        }
+    } catch (err) {
+        alert('Erreur de réseau.');
+        console.error(err);
+    }
+}
+</script>
 </body>
 </html>

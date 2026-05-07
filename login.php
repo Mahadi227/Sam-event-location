@@ -19,6 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['role'] = $user['role'];
         $_SESSION['branch_id'] = $user['branch_id'];
 
+        logActivity($user['id'], $user['branch_id'], 'LOGIN', 'Connexion réussie via email/téléphone.');
+
         // Role-based redirection
         switch ($user['role']) {
             case 'super_admin':
@@ -60,6 +62,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['name'] = $user['name'];
                 $_SESSION['role'] = $user['role'];
                 $_SESSION['branch_id'] = $user['branch_id'];
+
+                logActivity($user['id'], $user['branch_id'], 'LOGIN', 'Connexion réussie via Google Sign-In.');
 
                 // Role-based redirection
                 switch ($user['role']) {

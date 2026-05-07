@@ -2,6 +2,7 @@
 // admin/reservations.php
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
+require_once '../includes/engine.php';
 requireAdmin();
 // Active branch handling for Super Admin
 if (hasRole('super_admin') && isset($_GET['branch'])) {
@@ -33,6 +34,9 @@ if (isset($_POST['bulk_delete']) && hasRole('super_admin')) {
                 $pdo->prepare("DELETE FROM reservation_items WHERE reservation_id = ?")->execute([$res_id]);
                 $pdo->prepare("DELETE FROM reservations WHERE id = ?")->execute([$res_id]);
                 $pdo->commit();
+                
+                logActivity($_SESSION['user_id'], $_SESSION['branch_id'] ?? null, 'DELETE_RESERVATION', "Réservation #$res_id supprimée en masse.");
+                
                 $deleted_count++;
             } catch (Exception $e) {
                 $pdo->rollBack();
@@ -50,6 +54,9 @@ if (isset($_POST['bulk_delete']) && hasRole('super_admin')) {
         $pdo->prepare("DELETE FROM reservation_items WHERE reservation_id = ?")->execute([$res_id]);
         $pdo->prepare("DELETE FROM reservations WHERE id = ?")->execute([$res_id]);
         $pdo->commit();
+        
+        logActivity($_SESSION['user_id'], $_SESSION['branch_id'] ?? null, 'DELETE_RESERVATION', "Réservation #$res_id supprimée.");
+        
         header("Location: reservations.php?msg=deleted&count=1");
         exit;
     } catch (Exception $e) {
@@ -143,14 +150,16 @@ if (!empty($query_string_params)) $base_url = '?' . http_build_query($query_stri
         <a href="dashboard.php"><i class="fas fa-th-large"></i> &nbsp; Dashboard</a>
         <a href="items.php"><i class="fas fa-box"></i> &nbsp; Stock & Produits</a>
         <a href="reservations.php" class="active"><i class="fas fa-calendar-check"></i> &nbsp; Réservations</a>
+        <a href="returns.php"><i class="fas fa-undo"></i> &nbsp; Retours Matériel</a>
         <a href="payments.php"><i class="fas fa-money-bill-wave"></i> &nbsp; Paiements</a>
             <a href="transfers.php"><i class="fas fa-truck-loading"></i> &nbsp; Transferts Stock</a>
         <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse</a>
         <?php if (hasRole('super_admin')): ?>
-            <a href="branches.php"><i class="fas fa-building"></i> &nbsp; Succursales</a>
+            <a href="branches.php"><i class="fas fa-building"></i> &nbsp; Branches</a>
         <?php endif; ?>
         <?php if (hasRole('super_admin') || hasRole('mini_admin')): ?>
             <a href="users.php"><i class="fas fa-users-cog"></i> &nbsp; <?php echo hasRole('super_admin') ? 'Utilisateurs' : 'Personnel'; ?></a>
+            <a href="logs.php"><i class="fas fa-history"></i> &nbsp; Journal d'Activité</a>
         <?php endif; ?>
         <?php if (hasRole('super_admin')): ?>
             <a href="settings.php"><i class="fas fa-tools"></i> &nbsp; Paramètres</a>
@@ -177,7 +186,7 @@ if (!empty($query_string_params)) $base_url = '?' . http_build_query($query_stri
                 <div class="form-group" style="width: 200px;">
                     <label style="font-size: 0.85rem; font-weight: 700; color: #666;">Succursale</label>
                     <select name="branch" onchange="this.form.submit()" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
-                        <option value="all">Toutes les succursales</option>
+                        <option value="all">Toutes les branches</option>
                         <?php foreach ($branches as $b): ?>
                             <option value="<?php echo $b['id']; ?>" <?php echo $active_branch == $b['id'] ? 'selected' : ''; ?>>
                                 <?php echo htmlspecialchars($b['name']); ?>
@@ -199,6 +208,7 @@ if (!empty($query_string_params)) $base_url = '?' . http_build_query($query_stri
                         <option value="in_preparation" <?php echo ($_GET['status'] ?? '') == 'in_preparation' ? 'selected' : ''; ?>>In Preparation</option>
                         <option value="completed" <?php echo ($_GET['status'] ?? '') == 'completed' ? 'selected' : ''; ?>>Completed</option>
                         <option value="cancelled" <?php echo ($_GET['status'] ?? '') == 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
+                        <option value="returned" <?php echo ($_GET['status'] ?? '') == 'returned' ? 'selected' : ''; ?>>Returned</option>
                     </select>
                 </div>
                 <div class="form-group" style="width: 150px;">

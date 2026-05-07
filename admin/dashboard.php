@@ -84,6 +84,7 @@ $recent_payments = $recent_payments_stmt->fetchAll();
 
             <a href="items.php"><i class="fas fa-box"></i> &nbsp; Stock & Produits</a>
             <a href="reservations.php"><i class="fas fa-calendar-check"></i> &nbsp; Réservations</a>
+        <a href="returns.php"><i class="fas fa-undo"></i> &nbsp; Retours Matériel</a>
             <a href="payments.php"><i class="fas fa-money-bill-wave"></i> &nbsp; Paiements</a>
             <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse</a>
             <a href="profile.php" class="active"><i class="fas fa-user"></i> &nbsp; Mon Profil</a>
@@ -93,10 +94,11 @@ $recent_payments = $recent_payments_stmt->fetchAll();
                 <div
                     style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e214a4ff; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">
                     Super Admin</div>
-                <a href="branches.php"><i class="fas fa-building"></i> &nbsp; Succursales</a>
+                <a href="branches.php"><i class="fas fa-building"></i> &nbsp; Branch </a>
             <?php endif; ?>
             <?php if (hasRole('super_admin') || hasRole('mini_admin')): ?>
                 <a href="users.php"><i class="fas fa-users-cog"></i> &nbsp; <?php echo hasRole('super_admin') ? 'Utilisateurs' : 'Personnel'; ?></a>
+            <a href="logs.php"><i class="fas fa-history"></i> &nbsp; Journal d'Activité</a>
             <?php endif; ?>
             <?php if (hasRole('super_admin')): ?>
                 <a href="settings.php"><i class="fas fa-tools"></i> &nbsp; Paramètres</a>
@@ -118,7 +120,7 @@ $recent_payments = $recent_payments_stmt->fetchAll();
                 <div style="background: white; border-radius: 8px; border: 1px solid #e5e7eb; padding: 2px 10px; display: flex; align-items: center;">
                     <i class="fas fa-building" style="color: #6b7280; margin-right: 10px;"></i>
                     <select onchange="window.location.href='?switch_branch=' + this.value" style="border: none; outline: none; padding: 8px 0; font-family: inherit; font-size: 0.95rem; color: #1f2937; background: transparent; cursor: pointer;">
-                        <option value="all" <?php echo getActiveBranch() === null ? 'selected' : ''; ?>>Toutes les succursales</option>
+                        <option value="all" <?php echo getActiveBranch() === null ? 'selected' : ''; ?>>Toutes les branches </option>
                         <?php 
                         $branches_list = $pdo->query("SELECT * FROM branches ORDER BY name ASC")->fetchAll();
                         foreach($branches_list as $b): ?>

@@ -1,6 +1,7 @@
 <?php
 // process_booking.php
 require_once 'includes/db.php';
+require_once 'includes/engine.php';
 require_once 'includes/mailer.php';
 session_start();
 
@@ -30,6 +31,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         foreach ($selected_items as $item_id => $quantity) {
             $quantity = (int)$quantity;
             if ($quantity > 0) {
+                // Check stock
+                $available = getAvailableStock($item_id, $event_date);
+                if ($quantity > $available) {
+                    $stName = $pdo->prepare("SELECT name FROM items WHERE id = ?");
+                    $stName->execute([$item_id]);
+                    $itemName = $stName->fetchColumn() ?: "ID $item_id";
+                    throw new Exception("Stock insuffisant pour l'article « $itemName ». Disponible: $available.");
+                }
+
                 // Récupérer le prix actuel
                 $st = $pdo->prepare("SELECT price_per_day FROM items WHERE id = ?");
                 $st->execute([$item_id]);
@@ -44,6 +54,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $pdo->commit();
+        
+        // Log Activity
+        logActivity($user_id, null, 'CREATE_RESERVATION', "Réservation #$reservation_id créée pour $customer_name.");
         
         // Send Notification Email
         sendReservationEmail($pdo, $reservation_id, $customer_email);

@@ -114,6 +114,7 @@ $prev_year = date('Y', strtotime("-1 month", strtotime($first_day)));
         <a href="calendar.php" class="active"><i class="fas fa-calendar-alt"></i> &nbsp; Calendrier</a>
         <a href="items.php"><i class="fas fa-box"></i> &nbsp; Stock & Produits</a>
         <a href="reservations.php"><i class="fas fa-calendar-check"></i> &nbsp; Reservations</a>
+        <a href="returns.php"><i class="fas fa-undo"></i> &nbsp; Retours Matériel</a>
         <a href="payments.php"><i class="fas fa-money-bill-wave"></i> &nbsp; Paiements</a>
             <a href="transfers.php"><i class="fas fa-truck-loading"></i> &nbsp; Transferts Stock</a>
         <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse</a>
@@ -129,7 +130,7 @@ $prev_year = date('Y', strtotime("-1 month", strtotime($first_day)));
                 
                 <?php if (hasRole('super_admin')): ?>
                 <select name="branch" class="form-control" style="padding: 10px; border-radius: 8px; border: 1px solid #ddd;" onchange="this.form.submit()">
-                    <option value="">Toutes les succursales</option>
+                    <option value="">Toutes les branches </option>
                     <?php foreach ($branches as $b): ?>
                         <option value="<?php echo $b['id']; ?>" <?php echo $selected_branch == $b['id'] ? 'selected' : ''; ?>>
                             <?php echo htmlspecialchars($b['name']); ?>

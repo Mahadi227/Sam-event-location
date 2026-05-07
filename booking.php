@@ -141,7 +141,7 @@ if ($branch_id) {
             <?php if (!$branch_id): ?>
                 <div style="background: white; padding: 40px; border-radius: 20px; box-shadow: var(--shadow-strong); text-align: center;">
                     <h3>Veuillez sélectionner l'agence de retrait</h3>
-                    <p style="color: #666; margin-bottom: 20px;">Nos stocks varient en fonction de nos succursales.</p>
+                    <p style="color: #666; margin-bottom: 20px;">Nos stocks varient en fonction de nos branch .</p>
                     <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
                         <?php foreach($branches as $b): ?>
                             <a href="?branch_id=<?php echo $b['id']; ?>" style="display: block; width: 250px; padding: 25px; border: 2px solid var(--accent-gold); border-radius: 15px; text-decoration: none; color: #333; transition: 0.3s; background: #fff;" onmouseover="this.style.background='var(--accent-gold)'; this.style.color='white';" onmouseout="this.style.background='#fff'; this.style.color='#333';">
@@ -352,36 +352,67 @@ if ($branch_id) {
             const result = await res.json();
 
             // Update UI
+            const currency = '<?php echo getCurrency(); ?>';
+            const formatMoney = (val) => Number(val).toLocaleString('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 2}) + ' ' + currency;
+
             document.getElementById('displayDuration').innerText = data.duration + ' jour(s)';
-            document.getElementById('displayTotal').innerText = result.total.toLocaleString() + ' F';
-            document.getElementById('displayDelivery').innerText = result.delivery.toLocaleString() + ' F';
+            document.getElementById('displayTotal').innerText = formatMoney(result.total);
+            document.getElementById('displayDelivery').innerText = formatMoney(result.delivery);
             
             const discSpan = document.getElementById('displayDiscount');
             if (result.discount > 0) {
-                discSpan.innerText = '- ' + result.discount.toLocaleString() + ' F';
+                discSpan.innerText = '- ' + formatMoney(result.discount);
                 discSpan.style.color = '#15803d'; // dark green
                 discSpan.style.fontWeight = 'bold';
             } else {
-                discSpan.innerText = '0 F';
+                discSpan.innerText = formatMoney(0);
                 discSpan.style.color = 'inherit';
                 discSpan.style.fontWeight = 'normal';
             }
 
-            updateSummaryItems(items);
+            updateSummaryItems(items, data.duration, data.is_weekend);
         }
 
-        function updateSummaryItems(items) {
+        function updateSummaryItems(items, duration, isWeekend) {
+            const currency = '<?php echo getCurrency(); ?>';
+            const formatMoney = (val) => Number(val).toLocaleString('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 2}) + ' ' + currency;
+
             let html = '';
             let count = 0;
+            let itemsBaseTotal = 0;
             document.querySelectorAll('.item-qty').forEach(i => {
                 if (i.value > 0) {
                     count++;
-                    html += `<div style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:0.9rem;">
-                            <span>${i.dataset.name} x${i.value}</span>
-                            <span>${(i.dataset.price * i.value).toLocaleString()} <?php echo getCurrency(); ?></span>
+                    const qty = parseInt(i.value);
+                    const price = parseFloat(i.dataset.price);
+                    itemsBaseTotal += price * qty;
+                    
+                    html += `<div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem;">
+                            <span>${i.dataset.name} x${qty}</span>
+                            <span>${formatMoney(price * qty)} /j</span>
                          </div>`;
                 }
             });
+            
+            if (count > 0) {
+                html += `<div style="border-top:1px dashed #ccc; margin-top:10px; padding-top:10px; display:flex; justify-content:space-between; font-weight:bold; font-size:0.95rem; color:var(--primary-blue);">
+                            <span>Sous-total (Jour)</span>
+                            <span>${formatMoney(itemsBaseTotal)}</span>
+                         </div>`;
+                         
+                html += `<div style="display:flex; justify-content:space-between; font-size:0.9rem; margin-top:5px; color:#666;">
+                            <span>Durée de location</span>
+                            <span>x ${duration} jour(s)</span>
+                         </div>`;
+                
+                if (isWeekend) {
+                    html += `<div style="display:flex; justify-content:space-between; font-size:0.9rem; margin-top:5px; color:#d97706; font-weight:bold;">
+                            <span>Majoration Week-end</span>
+                            <span>Active</span>
+                         </div>`;
+                }
+            }
+            
             document.getElementById('summaryItems').innerHTML = count > 0 ? html : '<p style="color: #aaa; text-align: center;">Sélectionnez vos articles...</p>';
         }
 

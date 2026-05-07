@@ -59,18 +59,135 @@ $qr_url = "https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=" . urlen
 <head>
     <meta charset="UTF-8">
     <title>Facture #<?php echo $id; ?> - Sam Event</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
-        .invoice-box { border: 1px solid #eee; padding: 30px; border-radius: 10px; max-width: 800px; margin: auto; }
-        .header { display: flex; justify-content: space-between; margin-bottom: 40px; border-bottom: 2px solid #0047AB; padding-bottom: 20px; }
-        .logo { font-size: 24px; font-weight: bold; color: #0047AB; }
-        .info { display: flex; justify-content: space-between; margin-bottom: 40px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
-        th { background: #f8f9fa; padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        td { padding: 12px; border-bottom: 1px solid #eee; }
-        .total { text-align: right; font-size: 20px; font-weight: bold; color: #FF6600; }
-        .footer { margin-top: 50px; text-align: center; color: #999; font-size: 12px; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #e2e8f0;
+            color: #334155;
+            margin: 0;
+            padding: 40px;
+        }
+        .invoice-box {
+            max-width: 800px;
+            margin: auto;
+            padding: 40px;
+            background: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            position: relative;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .logo {
+            font-size: 2rem;
+            font-weight: 900;
+            color: #1e3a8a;
+        }
+        .logo span {
+            color: #d97706;
+        }
+        .invoice-title {
+            text-align: right;
+        }
+        .invoice-title h1 {
+            color: #1e3a8a;
+            margin: 0;
+            font-size: 2.2rem;
+            text-transform: uppercase;
+        }
+        .invoice-title p {
+            margin: 5px 0 0;
+            color: #64748b;
+        }
+        .info-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+        }
+        .info-block h3 {
+            margin: 0 0 10px;
+            color: #94a3b8;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .info-block p {
+            margin: 0 0 5px;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        table {
+            width: 100%;
+            line-height: inherit;
+            text-align: left;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        table th {
+            background: #f8fafc;
+            padding: 12px;
+            font-size: 0.9rem;
+            color: #64748b;
+            text-transform: uppercase;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        table td {
+            padding: 15px 12px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            color: #94a3b8;
+            font-size: 0.9rem;
+            border-top: 1px solid #f1f5f9;
+            padding-top: 20px;
+        }
+        .print-btn {
+            display: block;
+            width: 300px;
+            margin: 0 auto 20px;
+            padding: 15px;
+            background: #1e3a8a;
+            color: white;
+            text-align: center;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            font-size: 1.1rem;
+            transition: background 0.3s;
+        }
+        .print-btn:hover { background: #172554; }
+        .stamp-sold {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-15deg);
+            font-size: 4rem;
+            font-weight: 900;
+            color: rgba(22, 101, 52, 0.15);
+            border: 8px solid rgba(22, 101, 52, 0.15);
+            padding: 20px 40px;
+            border-radius: 15px;
+            pointer-events: none;
+            z-index: 10;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+        }
         @media print {
+            body { background: white; padding: 0; }
+            .invoice-box { box-shadow: none; padding: 0; }
             .no-print { display: none; }
         }
     </style>
@@ -78,32 +195,39 @@ $qr_url = "https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=" . urlen
 <body>
 
 <div class="no-print" style="text-align: center; margin-bottom: 20px;">
-    <button onclick="window.print()" style="padding: 10px 20px; background: #0047AB; color: white; border: none; border-radius: 5px; cursor: pointer;">Imprimer / Sauvegarder en PDF</button>
+    <button class="print-btn" onclick="window.print()"><i class="fas fa-print"></i> Imprimer / Sauvegarder en PDF</button>
 </div>
 
 <div class="invoice-box">
+    <?php if ($reste <= 0): ?>
+        <div class="stamp-sold">Facture Soldée</div>
+    <?php endif; ?>
+
     <div class="header">
-        <div class="logo">Sam Event LOCATION</div>
-        <div style="text-align: right;">
-            <strong>Facture #<?php echo $id; ?></strong><br>
-            Date: <?php echo date('d/m/Y', strtotime($res['created_at'])); ?>
+        <div class="logo">Sam Event <span>LOCATION</span></div>
+        <div class="invoice-title">
+            <h1>Facture de Location</h1>
+            <p>Réf: #RES-<?php echo str_pad($id, 4, '0', STR_PAD_LEFT); ?></p>
+            <p>Date: <?php echo date('d/m/Y', strtotime($res['created_at'])); ?></p>
         </div>
     </div>
 
-    <div class="info">
-        <div>
-            <strong>De:</strong><br>
-            Sam Event Location<br>
-           Branche : <?php echo htmlspecialchars($res['branch_name'] ?? 'Quartier Aéroport, Niamey'); ?><br>
-            Contact : <?php echo htmlspecialchars($res['branch_phone'] ?: '+227 96 12 44 90'); ?>
+    <div class="info-section">
+        <div class="info-block">
+            <h3>Émis par</h3>
+            <p>Sam Event Location</p>
+            <p><i class="fas fa-building"></i> Succursale: <?php echo htmlspecialchars($res['branch_name'] ?? 'Principale'); ?></p>
+            <p><i class="fas fa-phone-alt"></i> Contact: <?php echo htmlspecialchars($res['branch_phone'] ?: '+227 96 12 44 90'); ?></p>
         </div>
-        <div style="text-align: right;">
-            <strong>À:</strong><br>
-            <?php echo htmlspecialchars($res['customer_name']); ?><br>
-            <?php echo htmlspecialchars($res['customer_phone']); ?><br>
-            Date prévue: <?php echo date('d/m/Y', strtotime($res['event_date'])); ?><br>
-            Durée: <?php echo htmlspecialchars($res['duration_days'] ?? 1); ?> jour(s)<br>
-            Lieu: <?php echo htmlspecialchars($res['event_location']); ?><?php echo $res['distance_km'] ? ' (Distance : '.$res['distance_km'].' km)' : ''; ?>
+        <div class="info-block" style="text-align: right;">
+            <h3>Facturé à</h3>
+            <p><?php echo htmlspecialchars($res['customer_name']); ?></p>
+            <p><i class="fas fa-phone"></i> <?php echo htmlspecialchars($res['customer_phone']); ?></p>
+            <p style="margin-top: 10px; font-size: 0.9rem; color: #64748b;">
+                <strong>Date de l'événement:</strong> <?php echo date('d/m/Y', strtotime($res['event_date'])); ?><br>
+                <strong>Durée:</strong> <?php echo htmlspecialchars($res['duration_days'] ?? 1); ?> jour(s)<br>
+                <strong>Lieu:</strong> <?php echo htmlspecialchars($res['event_location']); ?><?php echo $res['distance_km'] ? ' (Distance: '.$res['distance_km'].' km)' : ''; ?>
+            </p>
         </div>
     </div>
 
@@ -111,18 +235,18 @@ $qr_url = "https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=" . urlen
         <thead>
             <tr>
                 <th>Désignation</th>
-                <th>Quantité</th>
-                <th>Prix Unitaire</th>
-                <th>Sous-total</th>
+                <th class="text-center">Quantité</th>
+                <th class="text-right">Prix Unitaire</th>
+                <th class="text-right">Sous-total</th>
             </tr>
         </thead>
         <tbody>
             <?php foreach ($items as $item): ?>
             <tr>
                 <td><?php echo htmlspecialchars($item['item_name']); ?></td>
-                <td><?php echo $item['quantity']; ?></td>
-                <td><?php echo number_format($item['price_at_time'], 0); ?> <?php echo getCurrency(); ?></td>
-                <td><?php echo number_format($item['price_at_time'] * $item['quantity'], 0); ?> <?php echo getCurrency(); ?></td>
+                <td class="text-center"><?php echo $item['quantity']; ?></td>
+                <td class="text-right"><?php echo number_format($item['price_at_time'], 0, ',', ' '); ?> <?php echo getCurrency(); ?></td>
+                <td class="text-right"><strong><?php echo number_format($item['price_at_time'] * $item['quantity'], 0, ',', ' '); ?> <?php echo getCurrency(); ?></strong></td>
             </tr>
             <?php endforeach; ?>
         </tbody>
@@ -171,7 +295,7 @@ $qr_url = "https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=" . urlen
                 
                 <?php if ($reste <= 0): ?>
                 <div style="text-align: right; margin-top: 20px;">
-                    <span style="background: #dcfce7; color: #166534; padding: 8px 20px; border-radius: 20px; font-weight: 900; font-size: 1.1rem; border: 1px solid #bbf7d0; display: inline-block;">FACTURE SOLDÉE</span>
+                    <span style="background: #dcfce7; color: #166534; padding: 8px 20px; border-radius: 20px; font-weight: 900; font-size: 1.1rem; border: 1px solid #bbf7d0; display: inline-block;"><i class="fas fa-check-circle"></i> FACTURE SOLDÉE</span>
                 </div>
                 <?php endif; ?>
             </div>
@@ -179,8 +303,8 @@ $qr_url = "https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=" . urlen
     </div>
 
     <div class="footer">
-        Merci de votre confiance !<br>
-        Sam Event Location - Votre partenaire événementiel à Niamey.
+        <p>Merci de votre confiance !</p>
+        <p>Sam Event Location - Votre partenaire événementiel à Niamey.</p>
     </div>
 </div>
 

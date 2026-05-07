@@ -89,7 +89,7 @@ try {
     foreach ($items_requested as $item_id => $qty) {
         if ($qty <= 0) continue;
 
-        $available = getAvailableStock($item_id, $event_date);
+        $available = getAvailableStock($item_id, $event_date, $duration);
         if ($qty > $available) {
             $stmt_name = $pdo->prepare("SELECT name FROM items WHERE id = ?");
             $stmt_name->execute([$item_id]);
@@ -144,6 +144,10 @@ try {
             $reservation_id
         );
     }
+    
+    // Log Activity
+    $actor_id = $_SESSION['user_id'] ?? $user_id;
+    logActivity($actor_id, $branch_id, 'CREATE_RESERVATION', "Réservation #$reservation_id créée pour $customer_name.");
 
     // Notify Socket Server (Real-time update)
     $ch = curl_init('http://localhost:3000/notify');

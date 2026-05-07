@@ -68,40 +68,94 @@ function calculateTotalPrice($items_requested, $params) {
             $promo_code_id = $promo['id'];
         }
     }
+    // 5. Tax
+    $tax_rate = getTaxRate();
+    $tax_amount = 0;
+    if ($tax_rate > 0) {
+        $tax_amount = $total * ($tax_rate / 100);
+        $total += $tax_amount;
+    }
     
     return [
-        'total' => round($total),
+        'total' => $total,
         'base' => $total_base,
         'delivery' => $delivery_total,
-        'discount' => round($discount),
+        'discount' => $discount,
+        'tax' => $tax_amount,
         'promo_code_id' => $promo_code_id
     ];
 }
 
 /**
- * Atomic Availability Check
+ * Atomic Availability Check (Dynamic Daily)
  */
-function getAvailableStock($item_id, $date) {
+function getAvailableStock($item_id, $start_date = null, $duration_days = 1) {
     global $pdo;
     
-    // Get total stock
-    $stmt = $pdo->prepare("SELECT quantity_total FROM items WHERE id = ?");
-    $stmt->execute([$item_id]);
-    $total = $stmt->fetchColumn();
+    if (empty($start_date)) {
+        $start_date = date('Y-m-d');
+    }
     
-    // Get reserved (Approved or Pending)
+    // Get total and maintenance stock
+    $stmt = $pdo->prepare("SELECT quantity_total, quantity_maintenance FROM items WHERE id = ?");
+    $stmt->execute([$item_id]);
+    $item = $stmt->fetch();
+    
+    if (!$item) return 0;
+    
+    $total = (int)$item['quantity_total'];
+    $maintenance = (int)$item['quantity_maintenance'];
+    
+    // Calculate requested end date
+    $end_date = date('Y-m-d', strtotime($start_date . " + " . ($duration_days - 1) . " days"));
+    
+    // Get reserved overlapping this period
     $stmt = $pdo->prepare("
         SELECT SUM(ri.quantity) 
         FROM reservation_items ri 
         JOIN reservations r ON ri.reservation_id = r.id 
         WHERE ri.item_id = ? 
-        AND r.event_date = ? 
         AND r.status IN ('approved', 'pending', 'in_preparation')
+        AND r.event_date <= ? 
+        AND DATE_ADD(r.event_date, INTERVAL (r.duration_days - 1) DAY) >= ?
     ");
-    $stmt->execute([$item_id, $date]);
+    $stmt->execute([$item_id, $end_date, $start_date]);
     $reserved = (int)$stmt->fetchColumn() ?: 0;
     
-    return max(0, $total - $reserved);
+    return max(0, $total - $maintenance - $reserved);
+}
+
+/**
+ * Helper: Get Today's Reserved Stock (For UI Snapshot)
+ */
+function getTodayReservedStock($item_id) {
+    global $pdo;
+    $today = date('Y-m-d');
+    $stmt = $pdo->prepare("
+        SELECT SUM(ri.quantity) 
+        FROM reservation_items ri 
+        JOIN reservations r ON ri.reservation_id = r.id 
+        WHERE ri.item_id = ? 
+        AND r.status IN ('approved', 'pending', 'in_preparation')
+        AND r.event_date <= ? 
+        AND DATE_ADD(r.event_date, INTERVAL (r.duration_days - 1) DAY) >= ?
+    ");
+    $stmt->execute([$item_id, $today, $today]);
+    return (int)$stmt->fetchColumn() ?: 0;
+}
+
+/**
+ * Helper: Update Maintenance Stock
+ * $action can be 'mark_damaged' (increase maintenance) or 'restore' (decrease maintenance)
+ */
+function updateItemMaintenance($item_id, $qty, $action) {
+    global $pdo;
+    if ($action === 'mark_damaged') {
+        $stmt = $pdo->prepare("UPDATE items SET quantity_maintenance = quantity_maintenance + ? WHERE id = ?");
+    } else {
+        $stmt = $pdo->prepare("UPDATE items SET quantity_maintenance = GREATEST(0, quantity_maintenance - ?) WHERE id = ?");
+    }
+    return $stmt->execute([$qty, $item_id]);
 }
 
 /**

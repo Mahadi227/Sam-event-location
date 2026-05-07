@@ -2,7 +2,7 @@
 // admin/branches.php
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
-requireSuperAdmin(); // Seul le super admin gère les succursales
+requireSuperAdmin(); // Seul le super admin gère les Branches
 
 $msg = '';
 $error = '';
@@ -10,7 +10,7 @@ $error = '';
 // Delete
 if (isset($_GET['delete'])) {
     if ($_GET['delete'] == 1) {
-        $error = "Impossible de supprimer la Succursale Principale.";
+        $error = "Impossible de supprimer la branch Principale.";
     } else {
         try {
             $stmt = $pdo->prepare("DELETE FROM branches WHERE id = ?");
@@ -18,7 +18,7 @@ if (isset($_GET['delete'])) {
             header("Location: branches.php");
             exit;
         } catch (PDOException $e) {
-            $error = "Erreur : Impossible de supprimer cette succursale car elle contient des données (utilisateurs, articles, réservations).";
+            $error = "Erreur : Impossible de supprimer cettesuccursale car elle contient des données (utilisateurs, articles, réservations).";
         }
     }
 }
@@ -33,11 +33,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($id) {
         $stmt = $pdo->prepare("UPDATE branches SET name = ?, location = ?, phone = ? WHERE id = ?");
         $stmt->execute([$name, $location, $phone, $id]);
-        $msg = "Succursale mise à jour !";
+        $msg = "branch mise à jour !";
     } else {
         $stmt = $pdo->prepare("INSERT INTO branches (name, location, phone) VALUES (?, ?, ?)");
         $stmt->execute([$name, $location, $phone]);
-        $msg = "Succursale ajoutée !";
+        $msg = "branch ajoutée !";
     }
 }
 
@@ -48,7 +48,7 @@ $branches = $pdo->query("SELECT * FROM branches ORDER BY name ASC")->fetchAll();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestion des Succursales - Sam Event Location</title>
+    <title>Gestion dessuccursalees - Sam Event Location</title>
     <link rel="stylesheet" href="../assets/css/admin.css?v=7">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -109,7 +109,7 @@ $branches = $pdo->query("SELECT * FROM branches ORDER BY name ASC")->fetchAll();
             <a href="payments.php"><i class="fas fa-money-bill-wave"></i> &nbsp; Paiements</a>
             <a href="transfers.php"><i class="fas fa-truck-loading"></i> &nbsp; Transferts Stock</a>
             <a href="items.php"><i class="fas fa-box"></i> &nbsp; Matériel</a>
-            <a href="branches.php" class="active"><i class="fas fa-code-branch"></i> &nbsp; Succursales</a>
+            <a href="branches.php" class="active"><i class="fas fa-code-branch"></i> &nbsp;succursales</a>
             <a href="users.php"><i class="fas fa-users"></i> &nbsp; Utilisateurs</a>
             <a href="user_history.php"><i class="fas fa-history"></i> &nbsp; Historique</a>
             <a href="settings.php"><i class="fas fa-cog"></i> &nbsp; Paramètres</a>
@@ -118,7 +118,7 @@ $branches = $pdo->query("SELECT * FROM branches ORDER BY name ASC")->fetchAll();
 
         <div class="main-content">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-                <h1 style="margin: 0; font-size: 1.8rem; color: #1a1c23;">Gestion des Succursales</h1>
+                <h1 style="margin: 0; font-size: 1.8rem; color: #1a1c23;">Gestion des Branches</h1>
                 <button class="contact-btn" onclick="openModal()"><i class="fas fa-plus"></i> Ajouter</button>
             </div>
 
@@ -144,7 +144,7 @@ $branches = $pdo->query("SELECT * FROM branches ORDER BY name ASC")->fetchAll();
                         </thead>
                         <tbody>
                             <?php if (empty($branches)): ?>
-                                <tr><td colspan="6" style="padding: 30px; text-align: center; color: #999;">Aucune succursale trouvée.</td></tr>
+                                <tr><td colspan="6" style="padding: 30px; text-align: center; color: #999;">Aucune Branch trouvée.</td></tr>
                             <?php endif; ?>
                             <?php foreach ($branches as $branch): 
                                 $isMain = ($branch['id'] == 1);
@@ -154,7 +154,7 @@ $branches = $pdo->query("SELECT * FROM branches ORDER BY name ASC")->fetchAll();
                                     <?php if($isMain): ?>
                                         <span style="background: #e6f7ff; color: #0ea5e9; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px;">SIÈGE PRINCIPAL</span>
                                     <?php else: ?>
-                                        <span style="background: #f3f4f6; color: #6b7280; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px;">SUCCURSALE</span>
+                                        <span style="background: #f3f4f6; color: #6b7280; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px;">Branch</span>
                                     <?php endif; ?>
                                 </td>
                                 <td data-label="Nom" style="padding: 15px; color: #1a1c23; font-weight: 600;">
@@ -179,7 +179,7 @@ $branches = $pdo->query("SELECT * FROM branches ORDER BY name ASC")->fetchAll();
                                     )" style="background:none; border:none; color: #4338ca; cursor: pointer; margin-right: 10px;" title="Modifier"><i class="fas fa-edit"></i></button>
                                     
                                     <?php if (!$isMain): ?>
-                                    <a href="?delete=<?php echo $branch['id']; ?>" onclick="return confirm('Êtes-vous sûr ? Supprimer une succursale est dangereux si elle contient des données.');" style="color: #ef4444;" title="Supprimer"><i class="fas fa-trash"></i></a>
+                                    <a href="?delete=<?php echo $branch['id']; ?>" onclick="return confirm('Êtes-vous sûr ? Supprimer une Branch est dangereux si elle contient des données.');" style="color: #ef4444;" title="Supprimer"><i class="fas fa-trash"></i></a>
                                     <?php endif; ?>
                                 </td>
                             </tr>
@@ -194,12 +194,12 @@ $branches = $pdo->query("SELECT * FROM branches ORDER BY name ASC")->fetchAll();
     <!-- Modal Form -->
     <div id="branchModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
         <div style="background: white; padding: 30px; border-radius: 15px; width: 90%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
-            <h2 id="modalTitle" style="margin-top: 0;">Ajouter une Succursale</h2>
+            <h2 id="modalTitle" style="margin-top: 0;">Ajouter une branch</h2>
             <form method="POST">
                 <input type="hidden" name="id" id="branch_id">
                 
                 <div class="form-group">
-                    <label>Nom de la Succursale</label>
+                    <label>Nom de la branch</label>
                     <input type="text" name="name" id="name" required style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
                 </div>
 
@@ -227,7 +227,7 @@ $branches = $pdo->query("SELECT * FROM branches ORDER BY name ASC")->fetchAll();
             document.getElementById('name').value = name;
             document.getElementById('location').value = location;
             document.getElementById('phone').value = phone;
-            document.getElementById('modalTitle').innerText = id ? 'Modifier Succursale' : 'Ajouter Succursale';
+            document.getElementById('modalTitle').innerText = id ? 'Modifier branch' : 'Ajouter branch';
             document.getElementById('branchModal').style.display = 'flex';
         }
 
