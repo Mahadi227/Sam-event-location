@@ -3,7 +3,7 @@
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
 require_once '../includes/engine.php';
-requireAdmin();
+requireStaff();
 
 $return_id = $_GET['id'] ?? ($_POST['return_id'] ?? null);
 if (!$return_id) {
@@ -11,7 +11,8 @@ if (!$return_id) {
 }
 
 // Fetch return
-$stmt = $pdo->prepare("SELECT ret.*, r.customer_name, r.customer_phone FROM returns ret JOIN reservations r ON ret.reservation_id = r.id WHERE ret.id = ?");
+$branchSql = getBranchSqlFilter('r');
+$stmt = $pdo->prepare("SELECT ret.*, r.customer_name, r.customer_phone FROM returns ret JOIN reservations r ON ret.reservation_id = r.id WHERE ret.id = ? $branchSql");
 $stmt->execute([$return_id]);
 $return_data = $stmt->fetch();
 
@@ -130,7 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </div>
 
 <div class="admin-container">
-    <?php include '../includes/admin_sidebar.php'; ?>
+    <?php include '../includes/receptionist_sidebar.php'; ?>
 
         <div class="main-content">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">

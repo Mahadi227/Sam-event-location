@@ -48,7 +48,7 @@ $branches = $pdo->query("SELECT * FROM branches ORDER BY name ASC")->fetchAll();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestion dessuccursalees - Sam Event Location</title>
+    <title>Gestion des succursales - Sam Event Location</title>
     <link rel="stylesheet" href="../assets/css/admin.css?v=7">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -98,27 +98,11 @@ $branches = $pdo->query("SELECT * FROM branches ORDER BY name ASC")->fetchAll();
     </div>
 
     <div class="admin-container">
-        <div class="sidebar-overlay"></div>
-        <div class="admin-sidebar">
-            <h2 style="color: white; margin-bottom: 30px;">Sam Admin</h2>
-            <a href="dashboard.php"><i class="fas fa-chart-line"></i> &nbsp; Dashboard</a>
-            <a href="create_reservation.php"><i class="fas fa-plus"></i> &nbsp; Nouvelle Rès.</a>
-            <a href="reservations.php"><i class="fas fa-list"></i> &nbsp; Réservations</a>
-            <a href="calendar.php"><i class="fas fa-calendar-alt"></i> &nbsp; Calendrier</a>
-            <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse (Shift)</a>
-            <a href="payments.php"><i class="fas fa-money-bill-wave"></i> &nbsp; Paiements</a>
-            <a href="transfers.php"><i class="fas fa-truck-loading"></i> &nbsp; Transferts Stock</a>
-            <a href="items.php"><i class="fas fa-box"></i> &nbsp; Matériel</a>
-            <a href="branches.php" class="active"><i class="fas fa-code-branch"></i> &nbsp;succursales</a>
-            <a href="users.php"><i class="fas fa-users"></i> &nbsp; Utilisateurs</a>
-            <a href="user_history.php"><i class="fas fa-history"></i> &nbsp; Historique</a>
-            <a href="settings.php"><i class="fas fa-cog"></i> &nbsp; Paramètres</a>
-            <a href="../logout.php" style="margin-top: 50px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> &nbsp; Déconnexion</a>
-        </div>
+        <?php include '../includes/admin_sidebar.php'; ?>
 
         <div class="main-content">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-                <h1 style="margin: 0; font-size: 1.8rem; color: #1a1c23;">Gestion des Branches</h1>
+                <h1 style="margin: 0; font-size: 1.8rem; color: #1a1c23;">Gestion des succursales</h1>
                 <button class="contact-btn" onclick="openModal()"><i class="fas fa-plus"></i> Ajouter</button>
             </div>
 
@@ -194,7 +178,7 @@ $branches = $pdo->query("SELECT * FROM branches ORDER BY name ASC")->fetchAll();
     <!-- Modal Form -->
     <div id="branchModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
         <div style="background: white; padding: 30px; border-radius: 15px; width: 90%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
-            <h2 id="modalTitle" style="margin-top: 0;">Ajouter une branch</h2>
+            <h2 id="modalTitle" style="margin-top: 0;">Ajouter une succursale</h2>
             <form method="POST">
                 <input type="hidden" name="id" id="branch_id">
                 

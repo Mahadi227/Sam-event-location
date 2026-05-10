@@ -20,8 +20,8 @@ if ($action === 'list') {
     $stmt->execute([$user_id]);
     $count = $stmt->fetchColumn();
 
-    // 2. Get Last 10 Notifications (Both read and unread, but mostly recent)
-    $stmt = $pdo->prepare("SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 10");
+    // 2. Get Last 100 Notifications (Both read and unread, but mostly recent)
+    $stmt = $pdo->prepare("SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 100");
     $stmt->execute([$user_id]);
     $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

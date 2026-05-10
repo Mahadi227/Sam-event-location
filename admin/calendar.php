@@ -108,20 +108,9 @@ $prev_year = date('Y', strtotime("-1 month", strtotime($first_day)));
 </div>
 
 <div class="admin-container">
-    <div class="admin-sidebar">
-        <h2>Sam Management</h2>
-        <a href="dashboard.php"><i class="fas fa-th-large"></i> &nbsp; Dashboard</a>
-        <a href="calendar.php" class="active"><i class="fas fa-calendar-alt"></i> &nbsp; Calendrier</a>
-        <a href="items.php"><i class="fas fa-box"></i> &nbsp; Stock & Produits</a>
-        <a href="reservations.php"><i class="fas fa-calendar-check"></i> &nbsp; Reservations</a>
-        <a href="returns.php"><i class="fas fa-undo"></i> &nbsp; Retours Matériel</a>
-        <a href="payments.php"><i class="fas fa-money-bill-wave"></i> &nbsp; Paiements</a>
-            <a href="transfers.php"><i class="fas fa-truck-loading"></i> &nbsp; Transferts Stock</a>
-        <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse</a>
-        <a href="../logout.php" style="margin-top: 50px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> &nbsp; Deconnexion</a>
-    </div>
+    <?php include '../includes/admin_sidebar.php'; ?>
 
-    <div class="main-content">
+        <div class="main-content">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
             <h2>Planning des reservations </h2>
             <form method="GET" style="display: flex; gap: 15px; align-items: center; margin: 0;">
@@ -130,7 +119,7 @@ $prev_year = date('Y', strtotime("-1 month", strtotime($first_day)));
                 
                 <?php if (hasRole('super_admin')): ?>
                 <select name="branch" class="form-control" style="padding: 10px; border-radius: 8px; border: 1px solid #ddd;" onchange="this.form.submit()">
-                    <option value="">Toutes les branches </option>
+                    <option value="">Toutes les succursales  </option>
                     <?php foreach ($branches as $b): ?>
                         <option value="<?php echo $b['id']; ?>" <?php echo $selected_branch == $b['id'] ? 'selected' : ''; ?>>
                             <?php echo htmlspecialchars($b['name']); ?>

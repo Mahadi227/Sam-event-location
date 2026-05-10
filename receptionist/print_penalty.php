@@ -2,17 +2,19 @@
 // admin/print_penalty.php
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
-requireAdmin();
+requireStaff();
 
 $return_id = $_GET['id'] ?? null;
 if (!$return_id) die("ID de retour manquant.");
 
+// Fetch return info
+$branchSql = getBranchSqlFilter('r');
 $stmt = $pdo->prepare("
     SELECT ret.*, r.customer_name, r.customer_phone, r.event_date, r.branch_id, b.name as branch_name, b.phone as branch_phone 
     FROM returns ret 
     JOIN reservations r ON ret.reservation_id = r.id 
     LEFT JOIN branches b ON r.branch_id = b.id 
-    WHERE ret.id = ?
+    WHERE ret.id = ? $branchSql
 ");
 $stmt->execute([$return_id]);
 $return_data = $stmt->fetch();

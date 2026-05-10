@@ -68,19 +68,9 @@ if (!empty($query_string_params)) {
 </div>
 
 <div class="admin-container">
-    <div class="sidebar-overlay"></div>
-    <div class="admin-sidebar">
-        <h2 style="color: white; margin-bottom: 30px;">Reception Sam</h2>
-        <a href="dashboard.php"><i class="fas fa-home"></i> &nbsp; Accueil</a>
-        <a href="walk_in.php"><i class="fas fa-plus"></i> &nbsp; Nouveau Walk-in</a>
-        <a href="reservations.php" class="active"><i class="fas fa-list"></i> &nbsp; Reservations</a>
-        <a href="calendar.php"><i class="fas fa-calendar-alt"></i> &nbsp; Calendrier</a>
-        <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse (Shift)</a>
-        <a href="profile.php"><i class="fas fa-user"></i> &nbsp; Mon Profil</a>
-        <a href="../logout.php" style="margin-top: 50px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> &nbsp; Déconnexion</a>
-    </div>
+    <?php include '../includes/receptionist_sidebar.php'; ?>
 
-    <div class="main-content">
+        <div class="main-content">
         <h2>Gestion des Réservations</h2>
 
         <!-- Filter Bar -->

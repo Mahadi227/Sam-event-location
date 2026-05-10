@@ -225,31 +225,9 @@ if (!$isGlobalView) {
 </div>
 
 <div class="admin-container">
-    <div class="sidebar-overlay"></div>
-    <div class="admin-sidebar">
-        <h2>Sam Management</h2>
-        <a href="dashboard.php"><i class="fas fa-th-large"></i> &nbsp; Dashboard</a>
-        <?php if (hasRole('super_admin')): ?><a href="analytics.php"><i class="fas fa-chart-pie"></i> &nbsp; Analytiques</a><?php endif; ?>
-        <a href="items.php"><i class="fas fa-box"></i> &nbsp; Stock & Produits</a>
-        <a href="reservations.php"><i class="fas fa-calendar-check"></i> &nbsp; Réservations</a>
-        <a href="returns.php"><i class="fas fa-undo"></i> &nbsp; Retours Matériel</a>
-        <a href="payments.php"><i class="fas fa-money-bill-wave"></i> &nbsp; Paiements</a>
-        <a href="transfers.php" class="active"><i class="fas fa-truck-loading"></i> &nbsp; Transferts Stock</a>
-        <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse</a>
-        <?php if (hasRole('super_admin')): ?>
-            <a href="branches.php"><i class="fas fa-building"></i> &nbsp; Succursales</a>
-        <?php endif; ?>
-        <?php if (hasRole('super_admin') || hasRole('mini_admin')): ?>
-            <a href="users.php"><i class="fas fa-users-cog"></i> &nbsp; <?php echo hasRole('super_admin') ? 'Utilisateurs' : 'Personnel'; ?></a>
-            <a href="logs.php"><i class="fas fa-history"></i> &nbsp; Journal d'Activité</a>
-        <?php endif; ?>
-        <?php if (hasRole('super_admin')): ?>
-            <a href="settings.php"><i class="fas fa-tools"></i> &nbsp; Paramètres</a>
-        <?php endif; ?>
-        <a href="../logout.php" style="margin-top: 50px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> &nbsp; Déconnexion</a>
-    </div>
+    <?php include '../includes/admin_sidebar.php'; ?>
 
-    <div class="main-content">
+        <div class="main-content">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <div>
                 <h2 style="margin: 0; display:flex; align-items:center; gap:10px;"><i class="fas fa-truck-loading" style="color:var(--primary-blue)"></i> Logistique Inter-Succursales</h2>

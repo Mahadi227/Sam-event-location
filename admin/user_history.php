@@ -80,21 +80,9 @@ if (!empty($query_string_params)) $base_url = '?' . http_build_query($query_stri
 </div>
 
 <div class="admin-container">
-    <div class="admin-sidebar">
-        <h2>Sam Management</h2>
-        <a href="dashboard.php"><i class="fas fa-th-large"></i> &nbsp; Dashboard</a>
-        <a href="items.php"><i class="fas fa-box"></i> &nbsp; Stock & Produits</a>
-        <a href="reservations.php"><i class="fas fa-calendar-check"></i> &nbsp; Réservations</a>
-        <a href="returns.php"><i class="fas fa-undo"></i> &nbsp; Retours Matériel</a>
-        <a href="payments.php"><i class="fas fa-money-bill-wave"></i> &nbsp; Paiements</a>
-            <a href="transfers.php"><i class="fas fa-truck-loading"></i> &nbsp; Transferts Stock</a>
-        <a href="caisse.php"><i class="fas fa-cash-register"></i> &nbsp; Caisse</a>
-        <a href="users.php" class="active"><i class="fas fa-users-cog"></i> &nbsp; Utilisateurs</a>
-        <a href="settings.php"><i class="fas fa-tools"></i> &nbsp; Paramètres</a>
-        <a href="../logout.php" style="margin-top: 50px; color: #ef4444;"><i class="fas fa-sign-out-alt"></i> &nbsp; Déconnexion</a>
-    </div>
+    <?php include '../includes/admin_sidebar.php'; ?>
 
-    <div class="main-content">
+        <div class="main-content">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 30px; flex-wrap: wrap;">
             <div style="display: flex; align-items: center; gap: 20px;">
                 <a href="users.php" style="background: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #333; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"><i class="fas fa-arrow-left"></i></a>

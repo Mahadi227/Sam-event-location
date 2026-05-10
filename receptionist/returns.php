@@ -2,7 +2,7 @@
 // admin/returns.php
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
-requireAdmin();
+requireStaff();
 
 // Active branch handling for Super Admin
 if (hasRole('super_admin') && isset($_GET['branch'])) {
@@ -155,7 +155,7 @@ $completed_returns = $pdo->query($completed_query)->fetchAll();
 </div>
 
 <div class="admin-container">
-    <?php include '../includes/admin_sidebar.php'; ?>
+    <?php include '../includes/receptionist_sidebar.php'; ?>
 
         <div class="main-content">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
@@ -230,7 +230,7 @@ $completed_returns = $pdo->query($completed_query)->fetchAll();
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <a href="barcode_scan.php?mode=return&reservation_id=<?php echo $r['id']; ?>" class="contact-btn" style="padding: 5px 15px; text-decoration: none; display: inline-block; background: #8b5cf6; margin-right: 5px;"><i class="fas fa-barcode"></i> Scan</a>
+                                        <a href="../admin/barcode_scan.php?mode=return&reservation_id=<?php echo $r['id']; ?>" class="contact-btn" style="padding: 5px 15px; text-decoration: none; display: inline-block; background: #8b5cf6; margin-right: 5px;"><i class="fas fa-barcode"></i> Scan</a>
                                         <a href="process_return.php?id=<?php echo $r['id']; ?>" class="contact-btn" style="padding: 5px 15px; text-decoration: none; display: inline-block;">Traiter le Retour</a>
                                     </td>
                                 </tr>
